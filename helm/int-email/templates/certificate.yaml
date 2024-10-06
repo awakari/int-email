@@ -7,7 +7,7 @@ spec:
   secretName: "{{ include "int-email.fullname" . }}-tls-secret"
   issuerRef:
     name: "{{ .Values.cert.issuer.name }}-int-email"
-    kind: ClusterIssuer
+    kind: Issuer
   dnsNames:
     {{- range .Values.ingress.hosts }}
     - "{{ .host }}"
