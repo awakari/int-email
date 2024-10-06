@@ -59,6 +59,10 @@ spec:
               value: "{{ .Values.log.level }}"
             - name: API_EVENT_TYPE_SELF
               value: "{{ .Values.api.event.typ.self }}"
+          volumeMounts:
+            - name: tls-certificates
+              mountPath: /etc/smtp/tls  # Mount the TLS secret here
+              readOnly: true
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -79,6 +83,10 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: tls-certificates
+          secret:
+            secretName: "{{ include "int-email.fullname" . }}-tls-secret"
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

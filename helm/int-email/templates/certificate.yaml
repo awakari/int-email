@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "{{ include "int-email.fullname" . }}-tls-cert"
+  namespace: "{{ .Release.Namespace }}"
+spec:
+  secretName: "{{ include "int-email.fullname" . }}-tls-secret"
+  issuerRef:
+    name: "{{ .Values.cert.issuer.name }}-int-email"
+    kind: ClusterIssuer
+  dnsNames:
+    {{- range .Values.ingress.hosts }}
+    - "{{ .host }}"
+    {{- end }}
+  usages:
+    - serverAuth

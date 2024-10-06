@@ -3,6 +3,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: "{{ .Values.cert.issuer.name }}-int-email"
+  namespace: "{{ .Release.Namespace }}"
 spec:
   acme:
     server: {{ .Values.cert.acme.server }}
