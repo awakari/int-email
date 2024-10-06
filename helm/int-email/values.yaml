@@ -36,11 +36,11 @@ securityContext: {}
   # runAsUser: 1000
 
 service:
-  type: ClusterIP
+  type: LoadBalancer
   port: 25
 
 ingress:
-  enabled: true
+  enabled: false
   hosts:
     - host: int-email.local
       paths:
