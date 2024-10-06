@@ -13,4 +13,6 @@ spec:
     - "{{ .host }}"
     {{- end }}
   usages:
-    - serverAuth
+    - "server auth"
+    - "digital signature"
+    - "key encipherment"
