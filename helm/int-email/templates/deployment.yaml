@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "int-email.fullname" . }}
+  labels:
+    {{- include "int-email.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "int-email.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "int-email.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "int-email.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      priorityClassName: "{{ .Values.priority.class }}"
+      containers:
+        - name: {{ .Chart.Name }}
+          env:
+            - name: API_PORT
+              value: "{{ .Values.service.port }}"
+            - name: API_SMTP_PORT
+              value: "{{ .Values.service.port }}"
+            {{- range .Values.ingress.hosts }}
+            - name: API_SMTP_HOST
+              value: "{{ .host }}"
+            {{- end }}
+            - name: API_EVENT_TYPE
+              value: "{{ .Values.api.event.type }}"
+            - name: API_INTERESTS_URI
+              value: "{{ .Values.api.interests.uri }}"
+            - name: API_INTERESTS_DETAILS_URI_PREFIX
+              value: "{{ .Values.api.interests.detailsUriPrefix }}"
+            - name: API_WRITER_BACKOFF
+              value: "{{ .Values.api.writer.backoff }}"
+            - name: API_WRITER_BATCH_SIZE
+              value: "{{ .Values.api.writer.batchSize }}"
+            - name: API_WRITER_CACHE_SIZE
+              value: "{{ .Values.api.writer.cache.size }}"
+            - name: API_WRITER_CACHE_TTL
+              value: "{{ .Values.api.writer.cache.ttl }}"
+            - name: API_WRITER_URI
+              value: "{{ .Values.api.writer.uri }}"
+            - name: API_READER_URI
+              value: "{{ .Values.api.reader.uri }}"
+            - name: API_READER_URI_EVT_BASE
+              value: "{{ .Values.api.reader.uriEvtBase }}"
+            - name: LOG_LEVEL
+              value: "{{ .Values.log.level }}"
+            - name: API_KEY_PUBLIC
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "int-email.fullname" . }}-keys"
+                  key: public
+            - name: API_KEY_PRIVATE
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "int-email.fullname" . }}-keys"
+                  key: private
+            - name: DB_TABLE_RETENTION_PERIOD_FOLLOWING
+              value: "{{ .Values.db.table.retention.following }}"
+            - name: API_EVENT_TYPE_SELF
+              value: "{{ .Values.api.event.typ.self }}"
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: smtp
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ include "int-email.name" . }}
