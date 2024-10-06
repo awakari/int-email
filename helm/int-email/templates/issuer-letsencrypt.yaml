@@ -11,6 +11,9 @@ spec:
     privateKeySecretRef:
       name: {{ .Values.cert.issuer.name }}
     solvers:
-      - http01:
-          ingress:
-            name: "{{ $fullName }}"
+      - dns01:
+          cloudDNS: # Example for Google Cloud DNS, use your appropriate provider
+            project: "{{ .Values.cloud.project }}"
+            serviceAccountSecretRef:
+              name: gcp-dns-secret
+              key: key.json
