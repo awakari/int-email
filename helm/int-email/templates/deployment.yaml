@@ -31,8 +31,6 @@ spec:
       containers:
         - name: {{ .Chart.Name }}
           env:
-            - name: API_PORT
-              value: "{{ .Values.service.port }}"
             - name: API_SMTP_PORT
               value: "{{ .Values.service.port }}"
             {{- range .Values.ingress.hosts }}
@@ -55,8 +53,6 @@ spec:
               value: "{{ .Values.api.writer.cache.ttl }}"
             - name: API_WRITER_URI
               value: "{{ .Values.api.writer.uri }}"
-            - name: API_READER_URI
-              value: "{{ .Values.api.reader.uri }}"
             - name: API_READER_URI_EVT_BASE
               value: "{{ .Values.api.reader.uriEvtBase }}"
             - name: LOG_LEVEL
@@ -74,12 +70,12 @@ spec:
           livenessProbe:
             tcpSocket:
               port: {{ .Values.service.port }}
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
             tcpSocket:
               port: {{ .Values.service.port }}
-            initialDelaySeconds: 10
+            initialDelaySeconds: 30
             periodSeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

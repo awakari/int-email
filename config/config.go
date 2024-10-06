@@ -24,8 +24,8 @@ type ApiConfig struct {
             Limit uint16   `envconfig:"API_SMTP_RECIPIENTS_LIMIT" default:"100" required:"true"`
         }
         Timeout struct {
-            Read  time.Duration `envconfig:"API_SMTP_TIMEOUT_READ" default:"10s" required:"true"`
-            Write time.Duration `envconfig:"API_SMTP_TIMEOUT_WRITE" default:"10s" required:"true"`
+            Read  time.Duration `envconfig:"API_SMTP_TIMEOUT_READ" default:"1m" required:"true"`
+            Write time.Duration `envconfig:"API_SMTP_TIMEOUT_WRITE" default:"1m" required:"true"`
         }
     }
     EventType EventTypeConfig
