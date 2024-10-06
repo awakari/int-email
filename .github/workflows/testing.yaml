@@ -1,0 +1,39 @@
+name: Testing
+
+on:
+  push:
+    branches:
+      - "*"
+      - "!mistress"
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+
+      - name: Build
+        run: make build
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.23
+
+      - name: Test
+        run: make test
+        env:
+          DB_URI_TEST_MONGO: ${{ secrets.DB_URI_TEST_MONGO }}
