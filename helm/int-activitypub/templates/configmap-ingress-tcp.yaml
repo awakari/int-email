@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: "{{ include "int-email.fullname" . }}-ingress-service"
-  namespace: "{{ .Release.Namespace }}"
-data:
-  "{{ .Values.service.port }}": "default/smtp-service:{{ .Values.service.port }}"
