@@ -4,4 +4,4 @@ metadata:
   name: "tcp-services"
   namespace: "{{ .Release.Namespace }}"
 data:
-  "{{ .Values.service.port }}": "default/smtp-service:{{ .Values.service.port }}"
+  "{{ .Values.service.port }}": "{{ .Release.Namespace }}/{{ include "int-email.fullname" . }}:{{ .Values.service.port }}"
