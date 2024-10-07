@@ -75,12 +75,12 @@ spec:
             tcpSocket:
               port: {{ .Values.service.port }}
             initialDelaySeconds: 30
-            periodSeconds: 10
+            periodSeconds: 604800
           readinessProbe:
             tcpSocket:
               port: {{ .Values.service.port }}
             initialDelaySeconds: 30
-            periodSeconds: 10
+            periodSeconds: 604800
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
