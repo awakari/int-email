@@ -9,7 +9,6 @@ import (
 	"github.com/awakari/int-email/service/writer"
 	"github.com/emersion/go-smtp"
 	"log/slog"
-	"net"
 	"os"
 )
 
@@ -53,12 +52,12 @@ func main() {
 	b = apiSmtp.NewBackendLogging(b, log)
 	srv := smtp.NewServer(b)
 	srv.Addr = fmt.Sprintf(":%d", cfg.Api.Smtp.Port)
-	srv.AllowInsecureAuth = false
 	srv.Domain = cfg.Api.Smtp.Host
 	srv.MaxMessageBytes = int64(cfg.Api.Smtp.Data.Limit)
 	srv.MaxRecipients = int(cfg.Api.Smtp.Recipients.Limit)
 	srv.ReadTimeout = cfg.Api.Smtp.Timeout.Read
 	srv.WriteTimeout = cfg.Api.Smtp.Timeout.Write
+	srv.AllowInsecureAuth = false
 
 	// Load the TLS certificate and key from the mounted volume
 	var cert tls.Certificate
@@ -67,17 +66,16 @@ func main() {
 		panic(err)
 	}
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		MinVersion:   tls.VersionTLS12, // Enforce TLS 1.2 or higher
+		Certificates: []tls.Certificate{
+			cert,
+		},
+		Renegotiation: tls.RenegotiateNever,
+		ClientAuth:    tls.NoClientCert,
+		MinVersion:    tls.VersionTLS12,
 	}
+	srv.TLSConfig = tlsConfig
 	log.Info("starting to listen for emails...")
-	// Start listening with TLS immediately (Implicit TLS on port 465)
-	var listener net.Listener
-	listener, err = tls.Listen("tcp", srv.Addr, tlsConfig)
-	if err != nil {
-		panic(err)
-	}
-	if err = srv.Serve(listener); err != nil {
+	if err = srv.ListenAndServe(); err != nil {
 		panic(err)
 	}
 }

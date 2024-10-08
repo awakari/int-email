@@ -71,16 +71,8 @@ spec:
             - name: smtp
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          livenessProbe:
-            tcpSocket:
-              port: {{ .Values.service.port }}
-            initialDelaySeconds: 30
-            periodSeconds: 604800
-          readinessProbe:
-            tcpSocket:
-              port: {{ .Values.service.port }}
-            initialDelaySeconds: 30
-            periodSeconds: 604800
+          livenessProbe: {}
+          readinessProbe: {}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
