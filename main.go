@@ -70,12 +70,16 @@ func main() {
 			cert,
 		},
 		Renegotiation: tls.RenegotiateNever,
-		ClientAuth:    tls.NoClientCert,
+		ClientAuth:    tls.RequireAndVerifyClientCert,
 		MinVersion:    tls.VersionTLS12,
 	}
-	srv.TLSConfig = tlsConfig
+	l, err := tls.Listen("tcp", srv.Addr, tlsConfig)
+	if err != nil {
+		panic(err)
+	}
+
 	log.Info("starting to listen for emails...")
-	if err = srv.ListenAndServe(); err != nil {
+	if err = srv.Serve(l); err != nil {
 		panic(err)
 	}
 }

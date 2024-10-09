@@ -37,7 +37,7 @@ securityContext: {}
 
 service:
   type: LoadBalancer
-  port: 587
+  port: 465
 
 ingress:
   enabled: false
@@ -47,7 +47,7 @@ ingress:
         - path: /
           pathType: ImplementationSpecific
   tls:
-    - secretName: int-email-tls-server
+    - secretName: int-email-tls-secret
       hosts:
         - int-email.local
 

@@ -20,7 +20,7 @@ ingress:
         - path: /
           pathType: ImplementationSpecific
   tls:
-    - secretName: int-email-tls-server
+    - secretName: int-email-tls-secret
       hosts:
         - email.awakari.com
 
