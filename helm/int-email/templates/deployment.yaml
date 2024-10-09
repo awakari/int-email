@@ -71,8 +71,8 @@ spec:
             - name: smtp
               containerPort: {{ .Values.service.port }}
               protocol: TCP
-          livenessProbe: {}
-          readinessProbe: {}
+          livenessProbe: null
+          readinessProbe: null
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
