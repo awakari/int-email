@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"github.com/kelseyhightower/envconfig"
 	"time"
 )
@@ -15,7 +16,7 @@ type Config struct {
 type ApiConfig struct {
 	Smtp struct {
 		Host string `envconfig:"API_SMTP_HOST" required:"true"`
-		Port uint16 `envconfig:"API_SMTP_PORT" default:"587" required:"true"`
+		Port uint16 `envconfig:"API_SMTP_PORT" default:"465" required:"true"`
 		Data struct {
 			Limit uint32 `envconfig:"API_SMTP_DATA_LIMIT" default:"1048576" required:"true"`
 		}
@@ -26,6 +27,12 @@ type ApiConfig struct {
 		Timeout struct {
 			Read  time.Duration `envconfig:"API_SMTP_TIMEOUT_READ" default:"1m" required:"true"`
 			Write time.Duration `envconfig:"API_SMTP_TIMEOUT_WRITE" default:"1m" required:"true"`
+		}
+		Tls struct {
+			CertPath       string             `envconfig:"API_SMTP_TLS_CERT_PATH" default:"/etc/smtp/tls/tls.crt" required:"true"`
+			KeyPath        string             `envconfig:"API_SMTP_TLS_KEY_PATH" default:"/etc/smtp/tls/tls.key" required:"true"`
+			MinVersion     uint16             `envconfig:"API_SMTP_TLS_MIN_VERSION" default:"769" required:"true"`
+			ClientAuthType tls.ClientAuthType `envconfig:"API_SMTP_TLS_CLIENT_AUTH_TYPE" default:"4" required:"true"`
 		}
 	}
 	EventType EventTypeConfig

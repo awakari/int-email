@@ -6,6 +6,7 @@ import (
 	"github.com/awakari/client-sdk-go/api"
 	apiSmtp "github.com/awakari/int-email/api/smtp"
 	"github.com/awakari/int-email/config"
+	"github.com/awakari/int-email/service/converter"
 	"github.com/awakari/int-email/service/writer"
 	"github.com/emersion/go-smtp"
 	"log/slog"
@@ -48,8 +49,13 @@ func main() {
 		rcpt := fmt.Sprintf("%s@%s", name, cfg.Api.Smtp.Host)
 		rcpts[rcpt] = true
 	}
-	b := apiSmtp.NewBackend(svcWriter, rcpts, int64(cfg.Api.Smtp.Data.Limit))
+
+	svcConv := converter.NewConverter()
+	svcConv = converter.NewLogging(svcConv, log)
+
+	b := apiSmtp.NewBackend(svcWriter, rcpts, int64(cfg.Api.Smtp.Data.Limit), cfg.Api.EventType.Self, svcConv)
 	b = apiSmtp.NewBackendLogging(b, log)
+
 	srv := smtp.NewServer(b)
 	srv.Addr = fmt.Sprintf(":%d", cfg.Api.Smtp.Port)
 	srv.Domain = cfg.Api.Smtp.Host
@@ -58,28 +64,23 @@ func main() {
 	srv.ReadTimeout = cfg.Api.Smtp.Timeout.Read
 	srv.WriteTimeout = cfg.Api.Smtp.Timeout.Write
 	srv.AllowInsecureAuth = false
-
+	srv.EnableREQUIRETLS = true
 	// Load the TLS certificate and key from the mounted volume
 	var cert tls.Certificate
-	cert, err = tls.LoadX509KeyPair("/etc/smtp/tls/tls.crt", "/etc/smtp/tls/tls.key")
+	cert, err = tls.LoadX509KeyPair(cfg.Api.Smtp.Tls.CertPath, cfg.Api.Smtp.Tls.KeyPath)
 	if err != nil {
 		panic(err)
 	}
-	tlsConfig := &tls.Config{
+	srv.TLSConfig = &tls.Config{
 		Certificates: []tls.Certificate{
 			cert,
 		},
-		Renegotiation: tls.RenegotiateNever,
-		ClientAuth:    tls.RequireAndVerifyClientCert,
-		MinVersion:    tls.VersionTLS12,
-	}
-	l, err := tls.Listen("tcp", srv.Addr, tlsConfig)
-	if err != nil {
-		panic(err)
+		ClientAuth: cfg.Api.Smtp.Tls.ClientAuthType,
+		MinVersion: cfg.Api.Smtp.Tls.MinVersion,
 	}
 
 	log.Info("starting to listen for emails...")
-	if err = srv.Serve(l); err != nil {
+	if err = srv.ListenAndServe(); err != nil {
 		panic(err)
 	}
 }

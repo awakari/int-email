@@ -37,7 +37,7 @@ securityContext: {}
 
 service:
   type: LoadBalancer
-  port: 465
+  port: 25
 
 ingress:
   enabled: false
