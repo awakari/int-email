@@ -37,12 +37,17 @@ var headerBlacklist = map[string]bool{
 	"deliverto":            true,
 	"dkimsignature":        true,
 	"from":                 true,
+	"listunsubscribe":      true,
 	"received":             true,
 	"returnpath":           true,
 	"to":                   true,
 	"xgmmessagestate":      true,
 	"xgoogledkimsignature": true,
 	"xgooglesmtpsource":    true,
+	"xmailgunbatchid":      true,
+	"xmailgunsendingip":    true,
+	"xmailgunsid":          true,
+	"xmailgunvariables":    true,
 	"xreceived":            true,
 }
 
@@ -66,63 +71,59 @@ func (c svc) Convert(src io.Reader, dst *pb.CloudEvent) (err error) {
 
 func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent) (err error) {
 
-	if src.Text != "" {
-		dst.Data = &pb.CloudEvent_TextData{
-			TextData: src.Text,
-		}
-	}
-	if src.HTML != "" {
-		dst.Data = &pb.CloudEvent_TextData{
-			TextData: src.HTML,
-		}
-	}
-	if dst.Data == nil {
-		err = fmt.Errorf("%w: %s", ErrParse, "no text data")
-	}
-
-	if err == nil {
-		for _, k := range src.GetHeaderKeys() {
-			v := src.GetHeader(k)
-			ceKey := c.convertHeaderKey(k)
-			switch ceKey {
-			case "date":
-				var t time.Time
-				t, err = time.Parse(time.RFC1123Z, v)
-				switch err {
-				case nil:
-					dst.Attributes[ceKeyTime] = &pb.CloudEventAttributeValue{
-						Attr: &pb.CloudEventAttributeValue_CeTimestamp{
-							CeTimestamp: timestamppb.New(t),
-						},
-					}
-				default:
-					err = fmt.Errorf("%w: %s", ErrParse, err)
-				}
-			case "messageid":
-				objectUrl := v
-				if strings.HasPrefix(objectUrl, "<") {
-					objectUrl = objectUrl[1:]
-				}
-				if strings.HasSuffix(objectUrl, ">") {
-					objectUrl = objectUrl[:len(objectUrl)-1]
-				}
-				dst.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
-					Attr: &pb.CloudEventAttributeValue_CeUri{
-						CeUri: objectUrl,
+	for _, k := range src.GetHeaderKeys() {
+		v := src.GetHeader(k)
+		ceKey := c.convertHeaderKey(k)
+		switch ceKey {
+		case "date":
+			var t time.Time
+			t, err = time.Parse(time.RFC1123Z, v)
+			switch err {
+			case nil:
+				dst.Attributes[ceKeyTime] = &pb.CloudEventAttributeValue{
+					Attr: &pb.CloudEventAttributeValue_CeTimestamp{
+						CeTimestamp: timestamppb.New(t),
 					},
 				}
 			default:
-				if !headerBlacklist[ceKey] {
-					dst.Attributes[ceKey] = &pb.CloudEventAttributeValue{
-						Attr: &pb.CloudEventAttributeValue_CeString{
-							CeString: v,
-						},
-					}
+				err = fmt.Errorf("%w: %s", ErrParse, err)
+			}
+		case "messageid":
+			objectUrl := c.convertAddr(v)
+			dst.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
+				Attr: &pb.CloudEventAttributeValue_CeUri{
+					CeUri: objectUrl,
+				},
+			}
+		case "listurl": // substack-specific
+			dst.Source = c.convertAddr(v)
+		default:
+			if !headerBlacklist[ceKey] && v != "" {
+				dst.Attributes[ceKey] = &pb.CloudEventAttributeValue{
+					Attr: &pb.CloudEventAttributeValue_CeString{
+						CeString: v,
+					},
 				}
 			}
-			if err != nil {
-				break
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	if err == nil {
+		if src.Text != "" {
+			dst.Data = &pb.CloudEvent_TextData{
+				TextData: src.Text,
 			}
+		}
+		if src.HTML != "" {
+			dst.Data = &pb.CloudEvent_TextData{
+				TextData: src.HTML,
+			}
+		}
+		if dst.Data == nil {
+			err = fmt.Errorf("%w: %s", ErrParse, "no text data")
 		}
 	}
 
@@ -179,6 +180,17 @@ func (c svc) convertHeaderKey(src string) (dst string) {
 	dst = strings.Replace(strings.ToLower(src), "-", "", -1)
 	if len(dst) > ceKeyLenMax {
 		dst = dst[:ceKeyLenMax]
+	}
+	return
+}
+
+func (c svc) convertAddr(src string) (dst string) {
+	dst = src
+	if strings.HasPrefix(dst, "<") {
+		dst = dst[1:]
+	}
+	if strings.HasSuffix(dst, ">") {
+		dst = dst[:len(dst)-1]
 	}
 	return
 }
