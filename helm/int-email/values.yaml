@@ -88,10 +88,10 @@ api:
   group: "default"
   smtp:
     data:
-      limit: 1048576
+      limit: "1048576"
     rcpt:
       names: "publish"
-      limit: 100
+      limit: "100"
     timeout:
       read: "1m"
       write: "1m"
