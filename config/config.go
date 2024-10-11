@@ -31,10 +31,11 @@ type ApiConfig struct {
 		Tls struct {
 			CertPath       string             `envconfig:"API_SMTP_TLS_CERT_PATH" default:"/etc/smtp/tls/tls.crt" required:"true"`
 			KeyPath        string             `envconfig:"API_SMTP_TLS_KEY_PATH" default:"/etc/smtp/tls/tls.key" required:"true"`
-			MinVersion     uint16             `envconfig:"API_SMTP_TLS_MIN_VERSION" default:"769" required:"true"`
+			VersionMin     uint16             `envconfig:"API_SMTP_TLS_VERSION_MIN" default:"769" required:"true"`
 			ClientAuthType tls.ClientAuthType `envconfig:"API_SMTP_TLS_CLIENT_AUTH_TYPE" default:"4" required:"true"`
 		}
 	}
+	Group     string `envconfig:"API_GROUP" default:"default" required:"true"`
 	EventType EventTypeConfig
 	Interests struct {
 		Uri              string `envconfig:"API_INTERESTS_URI" required:"true" default:"subscriptions-proxy:50051"`

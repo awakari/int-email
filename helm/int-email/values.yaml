@@ -85,6 +85,16 @@ affinity:
                 - "true"
 
 api:
+  group: "default"
+  smtp:
+    data:
+      limit: 1048576
+    rcpt:
+      names: "publish"
+      limit: 100
+    timeout:
+      read: "1m"
+      write: "1m"
   event:
     typ:
       self: "com_awakari_email_v1"
@@ -109,12 +119,21 @@ backup:
       schedule: "0 0 31 2 *" # never, manually only
     volume:
       name: "backup-secrets"
-cert:
-  acme:
-    email: "awakari@awakari.com"
-    server: "https://acme-staging-v02.api.letsencrypt.org/directory"
-  issuer:
-    name: letsencrypt-staging
+tls:
+  version:
+    min: 769
+  client:
+    auth:
+      type: 4
+  key:
+    path: "/etc/smtp/tls/tls.key"
+  cert:
+    path: "/etc/smtp/tls/tls.crt"
+    acme:
+      email: "awakari@awakari.com"
+      server: "https://acme-staging-v02.api.letsencrypt.org/directory"
+    issuer:
+      name: letsencrypt-staging
 log:
   # https://pkg.go.dev/golang.org/x/exp/slog#Level
   level: -4

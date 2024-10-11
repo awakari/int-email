@@ -37,8 +37,26 @@ spec:
             - name: API_SMTP_HOST
               value: "{{ .host }}"
             {{- end }}
-            - name: API_EVENT_TYPE
-              value: "{{ .Values.api.event.type }}"
+            - name: API_SMTP_DATA_LIMIT
+              value: "{{ .Values.api.smtp.data.limit }}"
+            - name: API_SMTP_RECIPIENTS_NAMES
+              value: "{{ .Values.api.smtp.rcpt.names }}"
+            - name: API_SMTP_RECIPIENTS_LIMIT
+              value: "{{ .Values.api.smtp.rcpt.limit }}"
+            - name: API_SMTP_TIMEOUT_READ
+              value: "{{ .Values.api.smtp.timeout.read }}"
+            - name: API_SMTP_TIMEOUT_WRITE
+              value: "{{ .Values.api.smtp.timeout.write }}"
+            - name: API_SMTP_TLS_CERT_PATH
+              value: "{{ .Values.tls.cert.path }}"
+            - name: API_SMTP_TLS_KEY_PATH
+              value: "{{ .Values.tls.key.path }}"
+            - name: API_SMTP_TLS_VERSION_MIN
+              value: "{{ .Values.tls.version.min }}"
+            - name: API_SMTP_TLS_CLIENT_AUTH_TYPE
+              value: "{{ .Values.tls.client.auth.type }}"
+            - name: API_GROUP
+              value: "{{ .Values.api.group }}"
             - name: API_INTERESTS_URI
               value: "{{ .Values.api.interests.uri }}"
             - name: API_INTERESTS_DETAILS_URI_PREFIX

@@ -2,40 +2,30 @@ package smtp
 
 import (
 	"context"
-	"github.com/awakari/int-email/service/converter"
-	"github.com/awakari/int-email/service/writer"
-	"github.com/cloudevents/sdk-go/binding/format/protobuf/v2/pb"
+	"github.com/awakari/int-email/service"
 	"github.com/emersion/go-smtp"
-	"github.com/segmentio/ksuid"
 	"io"
 )
 
 type session struct {
-	svcWriter    writer.Service
 	rcptsAllowed map[string]bool
 	dataLimit    int64
-	evtType      string
-	conv         converter.Service
+	svc          service.Service
 	//
 	allowed bool
 	from    string
-	data    []byte
 }
 
-func newSession(svcWriter writer.Service, rcptsAllowed map[string]bool, dataLimit int64, evtType string, conv converter.Service) smtp.Session {
+func newSession(rcptsAllowed map[string]bool, dataLimit int64, svc service.Service) smtp.Session {
 	return &session{
-		svcWriter:    svcWriter,
 		rcptsAllowed: rcptsAllowed,
 		dataLimit:    dataLimit,
-		evtType:      evtType,
-		conv:         conv,
 	}
 }
 
 func (s *session) Reset() {
 	s.allowed = false
 	s.from = ""
-	s.data = nil
 	return
 }
 
@@ -59,18 +49,8 @@ func (s *session) Data(r io.Reader) (err error) {
 	switch s.allowed {
 	case true:
 		r = io.LimitReader(r, s.dataLimit)
-		evt := &pb.CloudEvent{
-			Id:          ksuid.New().String(),
-			Source:      s.from,
-			SpecVersion: "1.0",
-			Type:        s.evtType,
-			Attributes:  make(map[string]*pb.CloudEventAttributeValue),
-		}
-		err = s.conv.Convert(r, evt)
-		switch err {
-		case nil:
-			err = s.svcWriter.Write(context.TODO(), evt, "default", s.from)
-		default:
+		err = s.svc.Submit(context.TODO(), s.from, r)
+		if err != nil {
 			err = &smtp.SMTPError{
 				Code: 554,
 				EnhancedCode: smtp.EnhancedCode{

@@ -2,14 +2,14 @@
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
-  name: "{{ .Values.cert.issuer.name }}-int-email"
+  name: "{{ .Values.tls.cert.issuer.name }}-int-email"
   namespace: "{{ .Release.Namespace }}"
 spec:
   acme:
-    server: {{ .Values.cert.acme.server }}
-    email: {{ .Values.cert.acme.email }}
+    server: {{ .Values.tls.cert.acme.server }}
+    email: {{ .Values.tls.cert.acme.email }}
     privateKeySecretRef:
-      name: {{ .Values.cert.issuer.name }}
+      name: {{ .Values.tls.cert.issuer.name }}
     solvers:
       - dns01:
           cloudDNS: # Example for Google Cloud DNS, use your appropriate provider

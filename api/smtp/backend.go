@@ -1,30 +1,25 @@
 package smtp
 
 import (
-	"github.com/awakari/int-email/service/converter"
-	"github.com/awakari/int-email/service/writer"
+	"github.com/awakari/int-email/service"
 	"github.com/emersion/go-smtp"
 )
 
 type backend struct {
-	svcWriter writer.Service
 	rcpts     map[string]bool
 	dataLimit int64
-	evtType   string
-	conv      converter.Service
+	svc       service.Service
 }
 
-func NewBackend(svcWriter writer.Service, rcpts map[string]bool, dataLimit int64, evtType string, conv converter.Service) smtp.Backend {
+func NewBackend(rcpts map[string]bool, dataLimit int64, svc service.Service) smtp.Backend {
 	return backend{
-		svcWriter: svcWriter,
 		rcpts:     rcpts,
 		dataLimit: dataLimit,
-		evtType:   evtType,
-		conv:      conv,
+		svc:       svc,
 	}
 }
 
 func (b backend) NewSession(c *smtp.Conn) (s smtp.Session, err error) {
-	s = newSession(b.svcWriter, b.rcpts, b.dataLimit, b.evtType, b.conv)
+	s = newSession(b.rcpts, b.dataLimit, b.svc)
 	return
 }

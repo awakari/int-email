@@ -23,6 +23,6 @@ func NewLogging(svc Service, log *slog.Logger) Service {
 
 func (l logging) Convert(src io.Reader, dst *pb.CloudEvent) (err error) {
 	err = l.svc.Convert(src, dst)
-	l.log.Log(context.TODO(), util.LogLevel(err), fmt.Sprintf("converter.Convert(objectUrl=%s, evtId=%s): %s", dst.Attributes[ceKeyObjectUrl], dst.Id, err))
+	l.log.Log(context.TODO(), util.LogLevel(err), fmt.Sprintf("converter.Convert(source=%s, objectUrl=%s, evtId=%s): %s", dst.Source, dst.Attributes[ceKeyObjectUrl], dst.Id, err))
 	return
 }

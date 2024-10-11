@@ -4,9 +4,11 @@ metadata:
   name: "{{ include "int-email.fullname" . }}-tls-cert"
   namespace: "{{ .Release.Namespace }}"
 spec:
-  secretName: "{{ include "int-email.fullname" . }}-tls-secret"
+  {{- range .Values.ingress.tls }}
+  secretName: "{{ .secretName }}"
+  {{- end }}
   issuerRef:
-    name: "{{ .Values.cert.issuer.name }}-int-email"
+    name: "{{ .Values.tls.cert.issuer.name }}-int-email"
     kind: Issuer
   dnsNames:
     {{- range .Values.ingress.hosts }}

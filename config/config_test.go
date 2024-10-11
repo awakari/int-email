@@ -19,5 +19,5 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, 23*time.Hour, cfg.Api.Writer.Backoff)
 	assert.Equal(t, "writer:56789", cfg.Api.Writer.Uri)
 	assert.Equal(t, slog.LevelWarn, slog.Level(cfg.Log.Level))
-	assert.Equal(t, tls.VerifyClientCertIfGiven, cfg.Api.Smtp.Tls.ClientAuthType)
+	assert.Equal(t, tls.RequireAndVerifyClientCert, cfg.Api.Smtp.Tls.ClientAuthType)
 }

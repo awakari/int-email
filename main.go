@@ -6,6 +6,7 @@ import (
 	"github.com/awakari/client-sdk-go/api"
 	apiSmtp "github.com/awakari/int-email/api/smtp"
 	"github.com/awakari/int-email/config"
+	"github.com/awakari/int-email/service"
 	"github.com/awakari/int-email/service/converter"
 	"github.com/awakari/int-email/service/writer"
 	"github.com/emersion/go-smtp"
@@ -43,17 +44,17 @@ func main() {
 
 	svcWriter := writer.NewService(clientAwk, cfg.Api.Writer.Backoff, cfg.Api.Writer.Cache, log)
 	svcWriter = writer.NewLogging(svcWriter, log)
+	svcConv := converter.NewConverter(cfg.Api.EventType.Self)
+	svcConv = converter.NewLogging(svcConv, log)
+	svc := service.NewService(svcConv, svcWriter, cfg.Api.Group)
+	svc = service.NewLogging(svc, log)
 
 	rcpts := map[string]bool{}
 	for _, name := range cfg.Api.Smtp.Recipients.Names {
 		rcpt := fmt.Sprintf("%s@%s", name, cfg.Api.Smtp.Host)
 		rcpts[rcpt] = true
 	}
-
-	svcConv := converter.NewConverter()
-	svcConv = converter.NewLogging(svcConv, log)
-
-	b := apiSmtp.NewBackend(svcWriter, rcpts, int64(cfg.Api.Smtp.Data.Limit), cfg.Api.EventType.Self, svcConv)
+	b := apiSmtp.NewBackend(rcpts, int64(cfg.Api.Smtp.Data.Limit), svc)
 	b = apiSmtp.NewBackendLogging(b, log)
 
 	srv := smtp.NewServer(b)
@@ -76,7 +77,7 @@ func main() {
 			cert,
 		},
 		ClientAuth: cfg.Api.Smtp.Tls.ClientAuthType,
-		MinVersion: cfg.Api.Smtp.Tls.MinVersion,
+		MinVersion: cfg.Api.Smtp.Tls.VersionMin,
 	}
 
 	log.Info("starting to listen for emails...")
