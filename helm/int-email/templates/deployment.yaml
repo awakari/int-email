@@ -42,7 +42,7 @@ spec:
             - name: API_SMTP_RECIPIENTS_NAMES
               valueFrom:
                 secretKeyRef:
-                  name: "{{ include "int-email" . }}"
+                  name: "{{ include "int-email.fullname" . }}"
                   key: rcpts
             - name: API_SMTP_RECIPIENTS_LIMIT
               value: "{{ .Values.api.smtp.rcpt.limit }}"
