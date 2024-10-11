@@ -20,6 +20,7 @@ func newSession(rcptsAllowed map[string]bool, dataLimit int64, svc service.Servi
 	return &session{
 		rcptsAllowed: rcptsAllowed,
 		dataLimit:    dataLimit,
+		svc:          svc,
 	}
 }
 
