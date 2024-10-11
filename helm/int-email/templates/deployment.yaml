@@ -40,7 +40,10 @@ spec:
             - name: API_SMTP_DATA_LIMIT
               value: "{{ .Values.api.smtp.data.limit }}"
             - name: API_SMTP_RECIPIENTS_NAMES
-              value: "{{ .Values.api.smtp.rcpt.names }}"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "int-email" . }}"
+                  key: rcpts
             - name: API_SMTP_RECIPIENTS_LIMIT
               value: "{{ .Values.api.smtp.rcpt.limit }}"
             - name: API_SMTP_TIMEOUT_READ

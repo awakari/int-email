@@ -3,8 +3,10 @@ package converter
 import (
 	"errors"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/cloudevents/sdk-go/binding/format/protobuf/v2/pb"
 	"github.com/jhillyerd/enmime"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/segmentio/ksuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"io"
@@ -17,7 +19,8 @@ type Service interface {
 }
 
 type svc struct {
-	evtType string
+	evtType    string
+	htmlPolicy *bluemonday.Policy
 }
 
 const ceKeyLenMax = 20
@@ -51,9 +54,10 @@ var headerBlacklist = map[string]bool{
 	"xreceived":            true,
 }
 
-func NewConverter(evtType string) Service {
+func NewConverter(evtType string, htmlPolicy *bluemonday.Policy) Service {
 	return svc{
-		evtType: evtType,
+		evtType:    evtType,
+		htmlPolicy: htmlPolicy,
 	}
 }
 
@@ -95,10 +99,11 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent) (err error) {
 					CeUri: objectUrl,
 				},
 			}
-		case "listurl": // substack-specific
+		case "listurl":
 			dst.Source = c.convertAddr(v)
 		default:
 			if !headerBlacklist[ceKey] && v != "" {
+				v = c.convertAddr(v)
 				dst.Attributes[ceKey] = &pb.CloudEventAttributeValue{
 					Attr: &pb.CloudEventAttributeValue_CeString{
 						CeString: v,
@@ -118,11 +123,14 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent) (err error) {
 			}
 		}
 		if src.HTML != "" {
-			dst.Data = &pb.CloudEvent_TextData{
-				TextData: src.HTML,
+			err = c.handleHtml(src.HTML, dst)
+			if err == nil {
+				dst.Data = &pb.CloudEvent_TextData{
+					TextData: c.htmlPolicy.Sanitize(src.HTML),
+				}
 			}
 		}
-		if dst.Data == nil {
+		if err == nil && dst.Data == nil {
 			err = fmt.Errorf("%w: %s", ErrParse, "no text data")
 		}
 	}
@@ -188,9 +196,37 @@ func (c svc) convertAddr(src string) (dst string) {
 	dst = src
 	if strings.HasPrefix(dst, "<") {
 		dst = dst[1:]
+		if strings.HasSuffix(dst, ">") {
+			dst = dst[:len(dst)-1]
+		}
 	}
-	if strings.HasSuffix(dst, ">") {
-		dst = dst[:len(dst)-1]
+	return
+}
+
+func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
+	var doc *goquery.Document
+	doc, err = goquery.NewDocumentFromReader(strings.NewReader(src))
+	if err != nil {
+		err = fmt.Errorf("%w: %s", ErrParse, err)
+	}
+	if err == nil {
+		s := doc.Find("a.email-button-outline")
+		for _, n := range s.Nodes {
+			var urlOrig string
+			for _, a := range n.Attr {
+				if a.Key == "href" {
+					urlOrig = a.Val
+					break
+				}
+			}
+			if urlOrig != "" {
+				evt.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
+					Attr: &pb.CloudEventAttributeValue_CeUri{
+						CeUri: urlOrig,
+					},
+				}
+			}
+		}
 	}
 	return
 }

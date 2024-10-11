@@ -2,6 +2,7 @@ package converter
 
 import (
 	"github.com/cloudevents/sdk-go/binding/format/protobuf/v2/pb"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"io"
@@ -129,7 +130,7 @@ John`),
 			err: ErrParse,
 		},
 	}
-	conv := NewConverter("com_awakari_email_v1")
+	conv := NewConverter("com_awakari_email_v1", bluemonday.NewPolicy())
 	conv = NewLogging(conv, slog.Default())
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {

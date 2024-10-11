@@ -9,6 +9,7 @@ import (
 	"github.com/awakari/int-email/service"
 	"github.com/awakari/int-email/service/converter"
 	"github.com/awakari/int-email/service/writer"
+	"github.com/awakari/int-email/util"
 	"github.com/emersion/go-smtp"
 	"log/slog"
 	"os"
@@ -44,7 +45,7 @@ func main() {
 
 	svcWriter := writer.NewService(clientAwk, cfg.Api.Writer.Backoff, cfg.Api.Writer.Cache, log)
 	svcWriter = writer.NewLogging(svcWriter, log)
-	svcConv := converter.NewConverter(cfg.Api.EventType.Self)
+	svcConv := converter.NewConverter(cfg.Api.EventType.Self, util.HtmlPolicy())
 	svcConv = converter.NewLogging(svcConv, log)
 	svc := service.NewService(svcConv, svcWriter, cfg.Api.Group)
 	svc = service.NewLogging(svc, log)

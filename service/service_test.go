@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/awakari/int-email/service/converter"
 	"github.com/awakari/int-email/service/writer"
+	"github.com/microcosm-cc/bluemonday"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"log/slog"
@@ -61,7 +62,7 @@ John`),
 	}
 	log := slog.Default()
 	s := NewService(
-		converter.NewLogging(converter.NewConverter("com_awakari_email_v1"), log),
+		converter.NewLogging(converter.NewConverter("com_awakari_email_v1", bluemonday.NewPolicy()), log),
 		writer.NewLogging(writer.NewMock(), log),
 		"default",
 	)

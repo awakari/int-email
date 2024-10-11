@@ -21,7 +21,7 @@ type ApiConfig struct {
 			Limit uint32 `envconfig:"API_SMTP_DATA_LIMIT" default:"1048576" required:"true"`
 		}
 		Recipients struct {
-			Names []string `envconfig:"API_SMTP_RECIPIENTS_NAMES" default:"publish" required:"true"`
+			Names []string `envconfig:"API_SMTP_RECIPIENTS_NAMES" required:"true"`
 			Limit uint16   `envconfig:"API_SMTP_RECIPIENTS_LIMIT" default:"100" required:"true"`
 		}
 		Timeout struct {
