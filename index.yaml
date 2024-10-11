@@ -3,12 +3,12 @@ entries:
   int-email:
   - apiVersion: v2
     appVersion: latest
-    created: "2024-10-10T18:23:46.239600685Z"
+    created: "2024-10-11T08:16:46.44227564Z"
     description: A Helm chart for Awakari int-email
-    digest: c3e2d85ffb54eb8045122f4183caeae31ad827b99b5977cc7c39d515d4d8beae
+    digest: 4b3d82e2aa1113003a5bf0ccb21ae3d76201eef823dda37839fa3bcebee81a6a
     name: int-email
     type: application
     urls:
     - int-email-0.0.0.tgz
     version: 0.0.0
-generated: "2024-10-10T18:23:46.23892146Z"
+generated: "2024-10-11T08:16:46.441533368Z"
