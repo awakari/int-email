@@ -5,6 +5,7 @@ import (
 	"github.com/awakari/int-email/service"
 	"github.com/emersion/go-smtp"
 	"io"
+	"strings"
 )
 
 type session struct {
@@ -44,11 +45,15 @@ func (s *session) Mail(from string, opts *smtp.MailOptions) (err error) {
 }
 
 func (s *session) Rcpt(to string, opts *smtp.RcptOptions) (err error) {
-	if s.rcptsPublish[to] {
-		s.publish = true
-	}
-	if s.rcptsInternal[to] {
-		s.internal = true
+	sepIdx := strings.LastIndex(to, "@")
+	if sepIdx > 0 {
+		name := to[:sepIdx]
+		if s.rcptsPublish[name] {
+			s.publish = true
+		}
+		if s.rcptsInternal[name] {
+			s.internal = true
+		}
 	}
 	return
 }

@@ -52,13 +52,11 @@ func main() {
 
 	rcptsPublish := map[string]bool{}
 	for _, name := range cfg.Api.Smtp.Recipients.Publish {
-		rcpt := fmt.Sprintf("%s@%s", name, cfg.Api.Smtp.Host)
-		rcptsPublish[rcpt] = true
+		rcptsPublish[name] = true
 	}
 	rcptsInternal := map[string]bool{}
 	for _, name := range cfg.Api.Smtp.Recipients.Internal {
-		rcpt := fmt.Sprintf("%s@%s", name, cfg.Api.Smtp.Host)
-		rcptsInternal[rcpt] = true
+		rcptsInternal[name] = true
 	}
 	b := apiSmtp.NewBackend(rcptsPublish, rcptsInternal, int64(cfg.Api.Smtp.Data.Limit), svc)
 	b = apiSmtp.NewBackendLogging(b, log)
