@@ -21,5 +21,7 @@ kubectl create secret generic gcp-dns-secret --from-file=key.json
 ```
 
 ```shell
-kubectl create secret generic int-email --from-literal=rcpts=rcpt1,rcpt2,...
+kubectl create secret generic int-email \
+  --from-literal=rcptsPublish=rcpt1,rcpt2 \
+  --from-literal=rcptsInternal=rcpt3,rcpt4,...
 ```

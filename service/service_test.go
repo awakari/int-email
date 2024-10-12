@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/awakari/int-email/config"
 	"github.com/awakari/int-email/service/converter"
 	"github.com/awakari/int-email/service/writer"
 	"github.com/microcosm-cc/bluemonday"
@@ -14,9 +15,10 @@ import (
 
 func TestSvc_Submit(t *testing.T) {
 	cases := map[string]struct {
-		from string
-		in   io.Reader
-		err  error
+		from     string
+		internal bool
+		in       io.Reader
+		err      error
 	}{
 		"empty": {
 			in:  strings.NewReader(""),
@@ -62,14 +64,21 @@ John`),
 	}
 	log := slog.Default()
 	s := NewService(
-		converter.NewLogging(converter.NewConverter("com_awakari_email_v1", bluemonday.NewPolicy()), log),
+		converter.NewLogging(
+			converter.NewConverter(
+				"com_awakari_email_v1",
+				bluemonday.NewPolicy(),
+				config.WriterInternalConfig{},
+			),
+			log,
+		),
 		writer.NewLogging(writer.NewMock(), log),
 		"default",
 	)
 	s = NewLogging(s, log)
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
-			err := s.Submit(context.TODO(), c.from, c.in)
+			err := s.Submit(context.TODO(), c.from, c.internal, c.in)
 			assert.ErrorIs(t, err, c.err)
 		})
 	}

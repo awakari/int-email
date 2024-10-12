@@ -104,6 +104,11 @@ api:
   reader:
     uriEvtBase: "https://awakari.com/pub-msg.html?id="
   writer:
+    internal:
+      name: "awkinternal"
+      secret: "resolver-internal-attr-val"
+      rateLimit:
+        minute: 1
     backoff: "10s"
     batchSize: 16
     cache:

@@ -45,17 +45,22 @@ func main() {
 
 	svcWriter := writer.NewService(clientAwk, cfg.Api.Writer.Backoff, cfg.Api.Writer.Cache, log)
 	svcWriter = writer.NewLogging(svcWriter, log)
-	svcConv := converter.NewConverter(cfg.Api.EventType.Self, util.HtmlPolicy())
+	svcConv := converter.NewConverter(cfg.Api.EventType.Self, util.HtmlPolicy(), cfg.Api.Writer.Internal)
 	svcConv = converter.NewLogging(svcConv, log)
 	svc := service.NewService(svcConv, svcWriter, cfg.Api.Group)
 	svc = service.NewLogging(svc, log)
 
-	rcpts := map[string]bool{}
-	for _, name := range cfg.Api.Smtp.Recipients.Names {
+	rcptsPublish := map[string]bool{}
+	for _, name := range cfg.Api.Smtp.Recipients.Publish {
 		rcpt := fmt.Sprintf("%s@%s", name, cfg.Api.Smtp.Host)
-		rcpts[rcpt] = true
+		rcptsPublish[rcpt] = true
 	}
-	b := apiSmtp.NewBackend(rcpts, int64(cfg.Api.Smtp.Data.Limit), svc)
+	rcptsInternal := map[string]bool{}
+	for _, name := range cfg.Api.Smtp.Recipients.Internal {
+		rcpt := fmt.Sprintf("%s@%s", name, cfg.Api.Smtp.Host)
+		rcptsInternal[rcpt] = true
+	}
+	b := apiSmtp.NewBackend(rcptsPublish, rcptsInternal, int64(cfg.Api.Smtp.Data.Limit), svc)
 	b = apiSmtp.NewBackendLogging(b, log)
 
 	srv := smtp.NewServer(b)

@@ -39,11 +39,16 @@ spec:
             {{- end }}
             - name: API_SMTP_DATA_LIMIT
               value: "{{ .Values.api.smtp.data.limit }}"
-            - name: API_SMTP_RECIPIENTS_NAMES
+            - name: API_SMTP_RECIPIENTS_PUBLISH
               valueFrom:
                 secretKeyRef:
                   name: "{{ include "int-email.fullname" . }}"
-                  key: rcpts
+                  key: rcptsPublish
+            - name: API_SMTP_RECIPIENTS_INTERNAL
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ include "int-email.fullname" . }}"
+                  key: rcptsInternal
             - name: API_SMTP_RECIPIENTS_LIMIT
               value: "{{ .Values.api.smtp.rcpt.limit }}"
             - name: API_SMTP_TIMEOUT_READ
@@ -74,6 +79,15 @@ spec:
               value: "{{ .Values.api.writer.cache.ttl }}"
             - name: API_WRITER_URI
               value: "{{ .Values.api.writer.uri }}"
+            - name: API_WRITER_INTERNAL_NAME
+              value: "{{ .Values.api.writer.internal.name }}"
+            - name: API_WRITER_INTERNAL_VALUE
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.api.writer.internal.secret }}"
+                  key: "{{ .Values.api.writer.internal.name }}"
+            - name: API_WRITER_INTERNAL_RATE_LIMIT_PER_MINUTE
+              value: "{{ .Values.api.writer.internal.rateLimit.minute }}"
             - name: API_READER_URI_EVT_BASE
               value: "{{ .Values.api.reader.uriEvtBase }}"
             - name: LOG_LEVEL

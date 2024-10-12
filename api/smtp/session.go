@@ -8,24 +8,28 @@ import (
 )
 
 type session struct {
-	rcptsAllowed map[string]bool
-	dataLimit    int64
-	svc          service.Service
+	rcptsPublish  map[string]bool
+	rcptsInternal map[string]bool
+	dataLimit     int64
+	svc           service.Service
 	//
-	allowed bool
-	from    string
+	publish  bool
+	internal bool
+	from     string
 }
 
-func newSession(rcptsAllowed map[string]bool, dataLimit int64, svc service.Service) smtp.Session {
+func newSession(rcptsPublish, rcptsInternal map[string]bool, dataLimit int64, svc service.Service) smtp.Session {
 	return &session{
-		rcptsAllowed: rcptsAllowed,
-		dataLimit:    dataLimit,
-		svc:          svc,
+		rcptsPublish:  rcptsPublish,
+		rcptsInternal: rcptsInternal,
+		dataLimit:     dataLimit,
+		svc:           svc,
 	}
 }
 
 func (s *session) Reset() {
-	s.allowed = false
+	s.publish = false
+	s.internal = false
 	s.from = ""
 	return
 }
@@ -40,17 +44,20 @@ func (s *session) Mail(from string, opts *smtp.MailOptions) (err error) {
 }
 
 func (s *session) Rcpt(to string, opts *smtp.RcptOptions) (err error) {
-	if s.rcptsAllowed[to] {
-		s.allowed = true
+	if s.rcptsPublish[to] {
+		s.publish = true
+	}
+	if s.rcptsInternal[to] {
+		s.internal = true
 	}
 	return
 }
 
 func (s *session) Data(r io.Reader) (err error) {
-	switch s.allowed {
-	case true:
+	switch {
+	case s.publish, s.internal:
 		r = io.LimitReader(r, s.dataLimit)
-		err = s.svc.Submit(context.TODO(), s.from, r)
+		err = s.svc.Submit(context.TODO(), s.from, s.internal, r)
 		if err != nil {
 			err = &smtp.SMTPError{
 				Code: 554,

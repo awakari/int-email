@@ -4,23 +4,26 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/awakari/int-email/config"
 	"github.com/cloudevents/sdk-go/binding/format/protobuf/v2/pb"
 	"github.com/jhillyerd/enmime"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/segmentio/ksuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"io"
+	"regexp"
 	"strings"
 	"time"
 )
 
 type Service interface {
-	Convert(src io.Reader, dst *pb.CloudEvent) (err error)
+	Convert(src io.Reader, dst *pb.CloudEvent, internal bool) (err error)
 }
 
 type svc struct {
-	evtType    string
-	htmlPolicy *bluemonday.Policy
+	evtType           string
+	htmlPolicy        *bluemonday.Policy
+	writerInternalCfg config.WriterInternalConfig
 }
 
 const ceKeyLenMax = 20
@@ -32,7 +35,6 @@ const ceKeyAttFileNames = "attachmentfilenames"
 const ceSpecVersion = "1.0"
 
 var ErrParse = errors.New("failed to parse message")
-
 var headerBlacklist = map[string]bool{
 	"bcc":                  true,
 	"cc":                   true,
@@ -53,27 +55,29 @@ var headerBlacklist = map[string]bool{
 	"xmailgunvariables":    true,
 	"xreceived":            true,
 }
+var reUrlTail = regexp.MustCompile(`\?[a-zA-Z0-9_\-]+=[a-zA-Z0-9_\-~.%&/#+]*`)
 
-func NewConverter(evtType string, htmlPolicy *bluemonday.Policy) Service {
+func NewConverter(evtType string, htmlPolicy *bluemonday.Policy, writerInternalCfg config.WriterInternalConfig) Service {
 	return svc{
-		evtType:    evtType,
-		htmlPolicy: htmlPolicy,
+		evtType:           evtType,
+		htmlPolicy:        htmlPolicy,
+		writerInternalCfg: writerInternalCfg,
 	}
 }
 
-func (c svc) Convert(src io.Reader, dst *pb.CloudEvent) (err error) {
+func (c svc) Convert(src io.Reader, dst *pb.CloudEvent, internal bool) (err error) {
 	var e *enmime.Envelope
 	e, err = enmime.ReadEnvelope(src)
 	switch err {
 	case nil:
-		err = c.convert(e, dst)
+		err = c.convert(e, dst, internal)
 	default:
 		err = fmt.Errorf("%w: %s", ErrParse, err)
 	}
 	return
 }
 
-func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent) (err error) {
+func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, internal bool) (err error) {
 
 	for _, k := range src.GetHeaderKeys() {
 		v := src.GetHeader(k)
@@ -102,7 +106,7 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent) (err error) {
 		case "listurl":
 			dst.Source = c.convertAddr(v)
 		default:
-			if !headerBlacklist[ceKey] && v != "" {
+			if internal || !headerBlacklist[ceKey] && v != "" {
 				v = c.convertAddr(v)
 				dst.Attributes[ceKey] = &pb.CloudEventAttributeValue{
 					Attr: &pb.CloudEventAttributeValue_CeString{
@@ -125,8 +129,16 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent) (err error) {
 		if src.HTML != "" {
 			err = c.handleHtml(src.HTML, dst)
 			if err == nil {
-				dst.Data = &pb.CloudEvent_TextData{
-					TextData: c.htmlPolicy.Sanitize(src.HTML),
+				switch internal {
+				case true:
+					dst.Data = &pb.CloudEvent_TextData{
+						TextData: src.HTML,
+					}
+				default:
+					txt := reUrlTail.ReplaceAllString(src.HTML, "\"")
+					dst.Data = &pb.CloudEvent_TextData{
+						TextData: c.htmlPolicy.Sanitize(txt),
+					}
 				}
 			}
 		}
@@ -181,6 +193,14 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent) (err error) {
 		}
 	}
 
+	if internal {
+		dst.Attributes[c.writerInternalCfg.Name] = &pb.CloudEventAttributeValue{
+			Attr: &pb.CloudEventAttributeValue_CeInteger{
+				CeInteger: c.writerInternalCfg.Value,
+			},
+		}
+	}
+
 	return
 }
 
@@ -199,6 +219,10 @@ func (c svc) convertAddr(src string) (dst string) {
 		if strings.HasSuffix(dst, ">") {
 			dst = dst[:len(dst)-1]
 		}
+	}
+	urlEnd := strings.Index(dst, "?")
+	if urlEnd > 0 {
+		dst = dst[:urlEnd]
 	}
 	return
 }
@@ -220,11 +244,16 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 				}
 			}
 			if urlOrig != "" {
+				urlEnd := strings.Index(urlOrig, "?")
+				if urlEnd > 0 {
+					urlOrig = urlOrig[:urlEnd]
+				}
 				evt.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
 					Attr: &pb.CloudEventAttributeValue_CeUri{
 						CeUri: urlOrig,
 					},
 				}
+				break
 			}
 		}
 	}

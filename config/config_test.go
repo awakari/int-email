@@ -14,7 +14,9 @@ func TestConfig(t *testing.T) {
 	os.Setenv("API_WRITER_BACKOFF", "23h")
 	os.Setenv("API_WRITER_URI", "writer:56789")
 	os.Setenv("LOG_LEVEL", "4")
-	os.Setenv("API_SMTP_RECIPIENTS_NAMES", "rcpt1,rcpt2")
+	os.Setenv("API_SMTP_RECIPIENTS_PUBLISH", "rcpt1,rcpt2")
+	os.Setenv("API_SMTP_RECIPIENTS_INTERNAL", "rcpt3,rcpt4")
+	os.Setenv("API_WRITER_INTERNAL_VALUE", "123")
 	cfg, err := NewConfigFromEnv()
 	assert.Nil(t, err)
 	assert.Equal(t, 23*time.Hour, cfg.Api.Writer.Backoff)
@@ -24,5 +26,5 @@ func TestConfig(t *testing.T) {
 	assert.Equal(t, []string{
 		"rcpt1",
 		"rcpt2",
-	}, cfg.Api.Smtp.Recipients.Names)
+	}, cfg.Api.Smtp.Recipients.Publish)
 }

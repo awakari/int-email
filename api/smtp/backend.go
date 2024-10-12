@@ -6,20 +6,22 @@ import (
 )
 
 type backend struct {
-	rcpts     map[string]bool
-	dataLimit int64
-	svc       service.Service
+	rcptsPublish  map[string]bool
+	rcptsInternal map[string]bool
+	dataLimit     int64
+	svc           service.Service
 }
 
-func NewBackend(rcpts map[string]bool, dataLimit int64, svc service.Service) smtp.Backend {
+func NewBackend(rcptsPublish, rcptsInternal map[string]bool, dataLimit int64, svc service.Service) smtp.Backend {
 	return backend{
-		rcpts:     rcpts,
-		dataLimit: dataLimit,
-		svc:       svc,
+		rcptsPublish:  rcptsPublish,
+		rcptsInternal: rcptsInternal,
+		dataLimit:     dataLimit,
+		svc:           svc,
 	}
 }
 
 func (b backend) NewSession(c *smtp.Conn) (s smtp.Session, err error) {
-	s = newSession(b.rcpts, b.dataLimit, b.svc)
+	s = newSession(b.rcptsPublish, b.rcptsInternal, b.dataLimit, b.svc)
 	return
 }

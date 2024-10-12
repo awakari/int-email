@@ -9,7 +9,7 @@ import (
 )
 
 type Service interface {
-	Submit(ctx context.Context, from string, r io.Reader) (err error)
+	Submit(ctx context.Context, from string, internal bool, r io.Reader) (err error)
 }
 
 type svc struct {
@@ -26,14 +26,14 @@ func NewService(conv converter.Service, writer writer.Service, group string) Ser
 	}
 }
 
-func (s svc) Submit(ctx context.Context, from string, r io.Reader) (err error) {
+func (s svc) Submit(ctx context.Context, from string, internal bool, r io.Reader) (err error) {
 	evt := &pb.CloudEvent{
 		Source:     from,
 		Attributes: make(map[string]*pb.CloudEventAttributeValue),
 	}
-	err = s.conv.Convert(r, evt)
+	err = s.conv.Convert(r, evt, internal)
 	if err == nil {
-		err = s.writer.Write(context.TODO(), evt, s.group, from)
+		err = s.writer.Write(context.TODO(), evt, s.group, evt.Source)
 	}
 	return
 }

@@ -21,8 +21,9 @@ type ApiConfig struct {
 			Limit uint32 `envconfig:"API_SMTP_DATA_LIMIT" default:"1048576" required:"true"`
 		}
 		Recipients struct {
-			Names []string `envconfig:"API_SMTP_RECIPIENTS_NAMES" required:"true"`
-			Limit uint16   `envconfig:"API_SMTP_RECIPIENTS_LIMIT" default:"100" required:"true"`
+			Publish  []string `envconfig:"API_SMTP_RECIPIENTS_PUBLISH" required:"true"`
+			Internal []string `envconfig:"API_SMTP_RECIPIENTS_INTERNAL" required:"true"`
+			Limit    uint16   `envconfig:"API_SMTP_RECIPIENTS_LIMIT" default:"100" required:"true"`
 		}
 		Timeout struct {
 			Read  time.Duration `envconfig:"API_SMTP_TIMEOUT_READ" default:"1m" required:"true"`
@@ -46,6 +47,7 @@ type ApiConfig struct {
 		Backoff   time.Duration `envconfig:"API_WRITER_BACKOFF" default:"10s" required:"true"`
 		BatchSize uint32        `envconfig:"API_WRITER_BATCH_SIZE" default:"16" required:"true"`
 		Cache     WriterCacheConfig
+		Internal  WriterInternalConfig
 		Uri       string `envconfig:"API_WRITER_URI" default:"resolver:50051" required:"true"`
 	}
 }
@@ -53,6 +55,12 @@ type ApiConfig struct {
 type WriterCacheConfig struct {
 	Size uint32        `envconfig:"API_WRITER_CACHE_SIZE" default:"100" required:"true"`
 	Ttl  time.Duration `envconfig:"API_WRITER_CACHE_TTL" default:"24h" required:"true"`
+}
+
+type WriterInternalConfig struct {
+	Name               string `envconfig:"API_WRITER_INTERNAL_NAME" default:"awkinternal" required:"true"`
+	Value              int32  `envconfig:"API_WRITER_INTERNAL_VALUE" required:"true"`
+	RateLimitPerMinute int    `envconfig:"API_WRITER_INTERNAL_RATE_LIMIT_PER_MINUTE" default:"1" required:"true"`
 }
 
 type ReaderConfig struct {

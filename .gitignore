@@ -26,3 +26,4 @@ secret*.yaml
 cover.tmp
 key.json
 .idea
+service/converter/emaildata.html
