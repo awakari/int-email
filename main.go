@@ -13,6 +13,7 @@ import (
 	"github.com/emersion/go-smtp"
 	"log/slog"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -45,18 +46,19 @@ func main() {
 
 	svcWriter := writer.NewService(clientAwk, cfg.Api.Writer.Backoff, cfg.Api.Writer.Cache, log)
 	svcWriter = writer.NewLogging(svcWriter, log)
-	svcConv := converter.NewConverter(cfg.Api.EventType.Self, util.HtmlPolicy(), cfg.Api.Writer.Internal)
+
+	rcptsPublish := map[string]bool{}
+	for _, name := range cfg.Api.Smtp.Recipients.Publish {
+		rcptsPublish[strings.ToLower(name)] = true
+	}
+	svcConv := converter.NewConverter(cfg.Api.EventType.Self, util.HtmlPolicy(), cfg.Api.Writer.Internal, rcptsPublish)
 	svcConv = converter.NewLogging(svcConv, log)
 	svc := service.NewService(svcConv, svcWriter, cfg.Api.Group)
 	svc = service.NewLogging(svc, log)
 
-	rcptsPublish := map[string]bool{}
-	for _, name := range cfg.Api.Smtp.Recipients.Publish {
-		rcptsPublish[name] = true
-	}
 	rcptsInternal := map[string]bool{}
 	for _, name := range cfg.Api.Smtp.Recipients.Internal {
-		rcptsInternal[name] = true
+		rcptsInternal[strings.ToLower(name)] = true
 	}
 	b := apiSmtp.NewBackend(rcptsPublish, rcptsInternal, int64(cfg.Api.Smtp.Data.Limit), svc)
 	b = apiSmtp.NewBackendLogging(b, log)

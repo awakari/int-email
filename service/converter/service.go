@@ -24,6 +24,7 @@ type svc struct {
 	evtType           string
 	htmlPolicy        *bluemonday.Policy
 	writerInternalCfg config.WriterInternalConfig
+	rcptsPublish      map[string]bool
 }
 
 const ceKeyLenMax = 20
@@ -35,33 +36,41 @@ const ceKeyAttFileNames = "attachmentfilenames"
 const ceSpecVersion = "1.0"
 
 var ErrParse = errors.New("failed to parse message")
-var headerBlacklist = map[string]bool{
-	"bcc":                  true,
-	"cc":                   true,
-	"deliveredto":          true,
-	"deliverto":            true,
-	"dkimsignature":        true,
-	"from":                 true,
-	"listunsubscribe":      true,
-	"received":             true,
-	"returnpath":           true,
-	"to":                   true,
-	"xgmmessagestate":      true,
-	"xgoogledkimsignature": true,
-	"xgooglesmtpsource":    true,
-	"xmailgunbatchid":      true,
-	"xmailgunsendingip":    true,
-	"xmailgunsid":          true,
-	"xmailgunvariables":    true,
-	"xreceived":            true,
+var headerWhiteList = map[string]bool{
+	"contenttransferencod": true,
+	"contenttype":          true,
+	"feedbackid":           true,
+	"inreplyto":            true,
+	"listhelp":             true,
+	"listhelpurl":          true,
+	"listid":               true,
+	"listowner":            true,
+	"listpost":             true,
+	"listsubscribe":        true,
+	"listurl":              true,
+	"mimeversion":          true,
+	"precedence":           true,
+	"references":           true,
+	"sender":               true,
+	"subject":              true,
+	"xcompanyid":           true,
+	"xemailcategory":       true,
+	"xfeedbackid":          true,
+	"xmailer":              true,
+	"xmailguntag":          true,
+	"xorganization":        true,
+	"xpriority":            true,
+	"xreportabuse":         true,
+	"xvirusscanned":        true,
 }
 var reUrlTail = regexp.MustCompile(`\?[a-zA-Z0-9_\-]+=[a-zA-Z0-9_\-~.%&/#+]*`)
 
-func NewConverter(evtType string, htmlPolicy *bluemonday.Policy, writerInternalCfg config.WriterInternalConfig) Service {
+func NewConverter(evtType string, htmlPolicy *bluemonday.Policy, writerInternalCfg config.WriterInternalConfig, rcptsPublish map[string]bool) Service {
 	return svc{
 		evtType:           evtType,
 		htmlPolicy:        htmlPolicy,
 		writerInternalCfg: writerInternalCfg,
+		rcptsPublish:      rcptsPublish,
 	}
 }
 
@@ -86,64 +95,58 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, internal bool) (e
 		case "date":
 			var t time.Time
 			t, err = time.Parse(time.RFC1123Z, v)
-			switch err {
-			case nil:
-				dst.Attributes[ceKeyTime] = &pb.CloudEventAttributeValue{
-					Attr: &pb.CloudEventAttributeValue_CeTimestamp{
-						CeTimestamp: timestamppb.New(t),
-					},
-				}
-			default:
-				err = fmt.Errorf("%w: %s", ErrParse, err)
+			if err != nil {
+				err = nil
+				t = time.Now().UTC()
+			}
+			dst.Attributes[ceKeyTime] = &pb.CloudEventAttributeValue{
+				Attr: &pb.CloudEventAttributeValue_CeTimestamp{
+					CeTimestamp: timestamppb.New(t),
+				},
 			}
 		case "messageid":
-			objectUrl := c.convertAddr(v)
+			objectUrl := c.cleanRecipients(c.convertAddr(v))
 			dst.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
 				Attr: &pb.CloudEventAttributeValue_CeUri{
 					CeUri: objectUrl,
 				},
 			}
 		case "listurl":
-			dst.Source = c.convertAddr(v)
+			dst.Source = c.cleanRecipients(c.convertAddr(v))
 		default:
-			if internal || !headerBlacklist[ceKey] && v != "" {
+			if internal || headerWhiteList[ceKey] && v != "" {
 				v = c.convertAddr(v)
 				dst.Attributes[ceKey] = &pb.CloudEventAttributeValue{
 					Attr: &pb.CloudEventAttributeValue_CeString{
-						CeString: v,
+						CeString: c.cleanRecipients(v),
 					},
 				}
 			}
 		}
-		if err != nil {
-			break
-		}
 	}
 
+	var txt string
+	if src.Text != "" {
+		txt = src.Text
+	}
+	if src.HTML != "" {
+		err = c.handleHtml(src.HTML, dst)
+		if err == nil {
+			txt = src.HTML
+			if !internal {
+				txt = reUrlTail.ReplaceAllString(txt, "\"")
+				txt = c.htmlPolicy.Sanitize(txt)
+			}
+		}
+	}
 	if err == nil {
-		if src.Text != "" {
-			dst.Data = &pb.CloudEvent_TextData{
-				TextData: src.Text,
-			}
-		}
-		if src.HTML != "" {
-			err = c.handleHtml(src.HTML, dst)
-			if err == nil {
-				switch internal {
-				case true:
-					dst.Data = &pb.CloudEvent_TextData{
-						TextData: src.HTML,
-					}
-				default:
-					txt := reUrlTail.ReplaceAllString(src.HTML, "\"")
-					dst.Data = &pb.CloudEvent_TextData{
-						TextData: c.htmlPolicy.Sanitize(txt),
-					}
-				}
-			}
-		}
-		if err == nil && dst.Data == nil {
+		switch txt {
+		case "":
 			err = fmt.Errorf("%w: %s", ErrParse, "no text data")
+		default:
+			dst.Data = &pb.CloudEvent_TextData{
+				TextData: c.cleanRecipients(txt),
+			}
 		}
 	}
 
@@ -152,7 +155,7 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, internal bool) (e
 			err = fmt.Errorf("%w: %s", ErrParse, "no message date in the source data")
 		}
 		if dst.Attributes[ceKeyObjectUrl] == nil {
-			err = fmt.Errorf("%w: %s", ErrParse, "no message in the source data")
+			err = fmt.Errorf("%w: %s", ErrParse, "no message id in the source data")
 		}
 	}
 
@@ -255,6 +258,25 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 				}
 				break
 			}
+		}
+	}
+	return
+}
+
+func (c svc) cleanRecipients(src string) (dst string) {
+	dst = src
+	for rcpt := range c.rcptsPublish {
+		if strings.Contains(dst, rcpt+"@") {
+			dst = strings.ReplaceAll(dst, rcpt+"@", "")
+		}
+		if strings.Contains(dst, strings.ToLower(rcpt)+"@") {
+			dst = strings.ReplaceAll(dst, strings.ToLower(rcpt)+"@", "")
+		}
+		if strings.Contains(dst, rcpt) {
+			dst = strings.ReplaceAll(dst, rcpt, "")
+		}
+		if strings.Contains(dst, strings.ToLower(rcpt)) {
+			dst = strings.ReplaceAll(dst, strings.ToLower(rcpt), "")
 		}
 	}
 	return

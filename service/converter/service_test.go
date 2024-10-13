@@ -75,13 +75,16 @@ MIME-Version: 1.0
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
 
-Hi Jane,
+Hi jane.smith@example.com,
 
 Please find attached the meeting notes and presentation slides.
 
 Best regards,
 John`),
 			out: &pb.CloudEvent{
+				Data: &pb.CloudEvent_TextData{
+					TextData: "Hi example.com,\n\nPlease find attached the meeting notes and presentation slides.\n\nBest regards,\nJohn",
+				},
 				Attributes: map[string]*pb.CloudEventAttributeValue{
 					"contenttype": {
 						Attr: &pb.CloudEventAttributeValue_CeString{
@@ -136,6 +139,9 @@ Please find attached the meeting notes and presentation slides.
 Best regards,
 John`),
 			out: &pb.CloudEvent{
+				Data: &pb.CloudEvent_TextData{
+					TextData: "Hi Jane,\n\nPlease find attached the meeting notes and presentation slides.\n\nBest regards,\nJohn",
+				},
 				Attributes: map[string]*pb.CloudEventAttributeValue{
 					"awkinternal": {
 						Attr: &pb.CloudEventAttributeValue_CeInteger{
@@ -183,6 +189,7 @@ To: Jane Smith <jane.smith@example.com>
 Subject: Meeting Notes and Attachment
 Date: Thu, 40 Oct 1024 12-34:56
 MIME-Version: 1.0
+Message-ID: <unique-message-id@example.com>
 Content-Type: text/plain; charset="UTF-8"
 Content-Transfer-Encoding: 7bit
 
@@ -192,13 +199,51 @@ Please find attached the meeting notes and presentation slides.
 
 Best regards,
 John`),
-			err: ErrParse,
+			out: &pb.CloudEvent{
+				Data: &pb.CloudEvent_TextData{
+					TextData: "Hi Jane,\n\nPlease find attached the meeting notes and presentation slides.\n\nBest regards,\nJohn",
+				},
+				Attributes: map[string]*pb.CloudEventAttributeValue{
+					"contenttype": {
+						Attr: &pb.CloudEventAttributeValue_CeString{
+							CeString: "text/plain; charset=\"UTF-8\"",
+						},
+					},
+					"contenttransferencod": {
+						Attr: &pb.CloudEventAttributeValue_CeString{
+							CeString: "7bit",
+						},
+					},
+					"objecturl": {
+						Attr: &pb.CloudEventAttributeValue_CeUri{
+							CeUri: "unique-message-id@example.com",
+						},
+					},
+					"mimeversion": {
+						Attr: &pb.CloudEventAttributeValue_CeString{
+							CeString: "1.0",
+						},
+					},
+					"subject": {
+						Attr: &pb.CloudEventAttributeValue_CeString{
+							CeString: "Meeting Notes and Attachment",
+						},
+					},
+				},
+			},
 		},
 	}
-	conv := NewConverter("com_awakari_email_v1", bluemonday.NewPolicy(), config.WriterInternalConfig{
-		Name:  "awkinternal",
-		Value: 12345,
-	})
+	conv := NewConverter(
+		"com_awakari_email_v1",
+		bluemonday.NewPolicy(),
+		config.WriterInternalConfig{
+			Name:  "awkinternal",
+			Value: 12345,
+		},
+		map[string]bool{
+			"jane.smith": true,
+		},
+	)
 	conv = NewLogging(conv, slog.Default())
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
@@ -208,6 +253,7 @@ John`),
 			err := conv.Convert(c.r, dst, c.internal)
 			if c.err == nil {
 				assert.NotZero(t, dst.Id)
+				assert.Equal(t, c.out.GetTextData(), dst.GetTextData())
 				for attrK, attrV := range c.out.Attributes {
 					assert.True(t, dst.Attributes[attrK] != nil, attrK)
 					assert.Equal(t, dst.Attributes[attrK].Attr, attrV.Attr, attrK)

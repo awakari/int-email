@@ -16,7 +16,7 @@ type session struct {
 	//
 	publish  bool
 	internal bool
-	from     string
+	from, to string
 }
 
 func newSession(rcptsPublish, rcptsInternal map[string]bool, dataLimit int64, svc service.Service) smtp.Session {
@@ -31,7 +31,7 @@ func newSession(rcptsPublish, rcptsInternal map[string]bool, dataLimit int64, sv
 func (s *session) Reset() {
 	s.publish = false
 	s.internal = false
-	s.from = ""
+	s.from, s.to = "", ""
 	return
 }
 
@@ -47,12 +47,14 @@ func (s *session) Mail(from string, opts *smtp.MailOptions) (err error) {
 func (s *session) Rcpt(to string, opts *smtp.RcptOptions) (err error) {
 	sepIdx := strings.LastIndex(to, "@")
 	if sepIdx > 0 {
-		name := to[:sepIdx]
+		name := strings.ToLower(to[:sepIdx])
 		if s.rcptsPublish[name] {
 			s.publish = true
+			s.to = to
 		}
 		if s.rcptsInternal[name] {
 			s.internal = true
+			s.to = to
 		}
 	}
 	return

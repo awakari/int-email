@@ -129,7 +129,7 @@ tls:
     min: 769
   client:
     auth:
-      type: 4
+      type: 3
   key:
     path: "/etc/smtp/tls/tls.key"
   cert:
