@@ -84,7 +84,7 @@ Best regards,
 John`),
 			from: "john.doe@example.com",
 			out: &pb.CloudEvent{
-				Source: "john.doe@example.com",
+				Source: "john@example.com",
 				Data: &pb.CloudEvent_TextData{
 					TextData: "Hi example.com,\n\nPlease find attached the meeting notes and presentation slides.\n\nBest regards,\nJohn",
 				},
@@ -109,7 +109,7 @@ John`),
 							CeString: "1.0",
 						},
 					},
-					"subject": {
+					"summary": {
 						Attr: &pb.CloudEventAttributeValue_CeString{
 							CeString: "Meeting Notes and Attachment",
 						},
@@ -142,6 +142,7 @@ Please find attached the meeting notes and presentation slides.
 Best regards,
 John`),
 			out: &pb.CloudEvent{
+				Source: "john@example.com",
 				Data: &pb.CloudEvent_TextData{
 					TextData: "Hi Jane,\n\nPlease find attached the meeting notes and presentation slides.\n\nBest regards,\nJohn",
 				},
@@ -171,7 +172,7 @@ John`),
 							CeString: "1.0",
 						},
 					},
-					"subject": {
+					"summary": {
 						Attr: &pb.CloudEventAttributeValue_CeString{
 							CeString: "Meeting Notes and Attachment",
 						},
@@ -203,6 +204,7 @@ Please find attached the meeting notes and presentation slides.
 Best regards,
 John`),
 			out: &pb.CloudEvent{
+				Source: "john@example.com",
 				Data: &pb.CloudEvent_TextData{
 					TextData: "Hi Jane,\n\nPlease find attached the meeting notes and presentation slides.\n\nBest regards,\nJohn",
 				},
@@ -227,7 +229,7 @@ John`),
 							CeString: "1.0",
 						},
 					},
-					"subject": {
+					"summary": {
 						Attr: &pb.CloudEventAttributeValue_CeString{
 							CeString: "Meeting Notes and Attachment",
 						},

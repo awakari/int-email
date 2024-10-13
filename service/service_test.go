@@ -43,8 +43,8 @@ Best regards,
 John`),
 		},
 		"fail write": {
-			from: "fail",
-			in: strings.NewReader(`From: John Doe <john@example.com>
+			from: "johndoe@example.com",
+			in: strings.NewReader(`From: fail
 To: Jane Smith <jane.smith@example.com>
 Subject: Meeting Notes and Attachment
 Date: Thu, 10 Oct 2024 12:34:56 +0000

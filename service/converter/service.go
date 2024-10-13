@@ -29,10 +29,13 @@ type svc struct {
 
 const ceKeyLenMax = 20
 const ceKeyObjectUrl = "objecturl"
+const ceKeySummary = "summary"
 const ceKeyTime = "time"
+
 const ceKeyAttContentIds = "attachmentcids"
 const ceKeyAttContentTypes = "attachmentctypes"
 const ceKeyAttFileNames = "attachmentfilenames"
+
 const ceSpecVersion = "1.0"
 
 var ErrParse = errors.New("failed to parse message")
@@ -104,23 +107,40 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, from string, inte
 					CeTimestamp: timestamppb.New(t),
 				},
 			}
-		case "messageid":
-			objectUrl := c.cleanRecipients(c.convertAddr(v))
-			dst.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
-				Attr: &pb.CloudEventAttributeValue_CeUri{
-					CeUri: objectUrl,
-				},
+		case "from":
+			fromActual := v
+			addrPos := strings.Index(v, "<")
+			if addrPos > 0 {
+				fromActual = fromActual[addrPos:]
 			}
+			dst.Source = c.cleanRecipients(c.convertAddr(fromActual))
 		case "listurl":
 			dst.Source = c.cleanRecipients(c.convertAddr(v))
+		case "messageid":
+			dst.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
+				Attr: &pb.CloudEventAttributeValue_CeUri{
+					CeUri: c.cleanRecipients(c.convertAddr(v)),
+				},
+			}
+		case "subject":
+			dst.Attributes[ceKeySummary] = &pb.CloudEventAttributeValue{
+				Attr: &pb.CloudEventAttributeValue_CeString{
+					CeString: c.cleanRecipients(v),
+				},
+			}
 		default:
-			if internal || headerWhiteList[ceKey] && v != "" {
+			switch {
+			case internal, headerWhiteList[ceKey]:
 				v = c.convertAddr(v)
-				dst.Attributes[ceKey] = &pb.CloudEventAttributeValue{
-					Attr: &pb.CloudEventAttributeValue_CeString{
-						CeString: c.cleanRecipients(v),
-					},
+				if v != "" {
+					dst.Attributes[ceKey] = &pb.CloudEventAttributeValue{
+						Attr: &pb.CloudEventAttributeValue_CeString{
+							CeString: c.cleanRecipients(v),
+						},
+					}
 				}
+			default:
+				fmt.Printf("forbidden header from %s: %s=%s\n", from, k, v)
 			}
 		}
 	}

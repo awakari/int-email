@@ -193,6 +193,7 @@ func HtmlPolicy() (p *bluemonday.Policy) {
 	p.RequireNoFollowOnLinks(true)
 	p.RequireCrossOriginAnonymous(true)
 	p.RequireNoReferrerOnLinks(true)
+	p.AllowStyling()
 
 	return
 }
