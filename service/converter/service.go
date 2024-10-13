@@ -17,7 +17,7 @@ import (
 )
 
 type Service interface {
-	Convert(src io.Reader, dst *pb.CloudEvent, internal bool) (err error)
+	Convert(src io.Reader, dst *pb.CloudEvent, from string, internal bool) (err error)
 }
 
 type svc struct {
@@ -74,19 +74,19 @@ func NewConverter(evtType string, htmlPolicy *bluemonday.Policy, writerInternalC
 	}
 }
 
-func (c svc) Convert(src io.Reader, dst *pb.CloudEvent, internal bool) (err error) {
+func (c svc) Convert(src io.Reader, dst *pb.CloudEvent, from string, internal bool) (err error) {
 	var e *enmime.Envelope
 	e, err = enmime.ReadEnvelope(src)
 	switch err {
 	case nil:
-		err = c.convert(e, dst, internal)
+		err = c.convert(e, dst, from, internal)
 	default:
 		err = fmt.Errorf("%w: %s", ErrParse, err)
 	}
 	return
 }
 
-func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, internal bool) (err error) {
+func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, from string, internal bool) (err error) {
 
 	for _, k := range src.GetHeaderKeys() {
 		v := src.GetHeader(k)
@@ -162,6 +162,9 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, internal bool) (e
 	if err == nil {
 
 		dst.Id = ksuid.New().String()
+		if dst.Source == "" {
+			dst.Source = c.cleanRecipients(from)
+		}
 		dst.SpecVersion = ceSpecVersion
 		dst.Type = c.evtType
 

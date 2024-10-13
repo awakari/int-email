@@ -21,8 +21,8 @@ func NewLogging(svc Service, log *slog.Logger) Service {
 	}
 }
 
-func (l logging) Convert(src io.Reader, dst *pb.CloudEvent, internal bool) (err error) {
-	err = l.svc.Convert(src, dst, internal)
-	l.log.Log(context.TODO(), util.LogLevel(err), fmt.Sprintf("converter.Convert(source=%s, objectUrl=%s, evtId=%s, internal=%t): %s", dst.Source, dst.Attributes[ceKeyObjectUrl], dst.Id, internal, err))
+func (l logging) Convert(src io.Reader, dst *pb.CloudEvent, from string, internal bool) (err error) {
+	err = l.svc.Convert(src, dst, from, internal)
+	l.log.Log(context.TODO(), util.LogLevel(err), fmt.Sprintf("converter.Convert(source=%s, objectUrl=%s, evtId=%s, from=%s, internal=%t): %s", dst.Source, dst.Attributes[ceKeyObjectUrl], dst.Id, from, internal, err))
 	return
 }

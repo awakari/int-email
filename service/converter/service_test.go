@@ -19,6 +19,7 @@ import (
 func TestSvc_Convert(t *testing.T) {
 	cases := map[string]struct {
 		r        io.Reader
+		from     string
 		internal bool
 		out      *pb.CloudEvent
 		err      error
@@ -81,7 +82,9 @@ Please find attached the meeting notes and presentation slides.
 
 Best regards,
 John`),
+			from: "john.doe@example.com",
 			out: &pb.CloudEvent{
+				Source: "john.doe@example.com",
 				Data: &pb.CloudEvent_TextData{
 					TextData: "Hi example.com,\n\nPlease find attached the meeting notes and presentation slides.\n\nBest regards,\nJohn",
 				},
@@ -250,9 +253,10 @@ John`),
 			dst := &pb.CloudEvent{
 				Attributes: make(map[string]*pb.CloudEventAttributeValue),
 			}
-			err := conv.Convert(c.r, dst, c.internal)
+			err := conv.Convert(c.r, dst, c.from, c.internal)
 			if c.err == nil {
 				assert.NotZero(t, dst.Id)
+				assert.Equal(t, c.out.Source, dst.Source)
 				assert.Equal(t, c.out.GetTextData(), dst.GetTextData())
 				for attrK, attrV := range c.out.Attributes {
 					assert.True(t, dst.Attributes[attrK] != nil, attrK)

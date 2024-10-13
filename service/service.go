@@ -28,10 +28,9 @@ func NewService(conv converter.Service, writer writer.Service, group string) Ser
 
 func (s svc) Submit(ctx context.Context, from string, internal bool, r io.Reader) (err error) {
 	evt := &pb.CloudEvent{
-		Source:     from,
 		Attributes: make(map[string]*pb.CloudEventAttributeValue),
 	}
-	err = s.conv.Convert(r, evt, internal)
+	err = s.conv.Convert(r, evt, from, internal)
 	if err == nil {
 		err = s.writer.Write(context.TODO(), evt, s.group, evt.Source)
 	}
