@@ -260,27 +260,33 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 		err = fmt.Errorf("%w: %s", ErrParse, err)
 	}
 	if err == nil {
+		// substack
 		s := doc.Find("a.email-button-outline")
-		for _, n := range s.Nodes {
-			var urlOrig string
-			for _, a := range n.Attr {
-				if a.Key == "href" {
-					urlOrig = a.Val
-					break
-				}
-			}
-			if urlOrig != "" {
-				urlEnd := strings.Index(urlOrig, "?")
-				if urlEnd > 0 {
-					urlOrig = urlOrig[:urlEnd]
-				}
-				evt.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
-					Attr: &pb.CloudEventAttributeValue_CeUri{
-						CeUri: urlOrig,
-					},
-				}
+		c.handleUrlOriginal(s, evt)
+	}
+	return
+}
+
+func (c svc) handleUrlOriginal(s *goquery.Selection, evt *pb.CloudEvent) {
+	for _, n := range s.Nodes {
+		var urlOrig string
+		for _, a := range n.Attr {
+			if a.Key == "href" {
+				urlOrig = a.Val
 				break
 			}
+		}
+		if urlOrig != "" {
+			urlEnd := strings.Index(urlOrig, "?")
+			if urlEnd > 0 {
+				urlOrig = urlOrig[:urlEnd]
+			}
+			evt.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
+				Attr: &pb.CloudEventAttributeValue_CeUri{
+					CeUri: urlOrig,
+				},
+			}
+			break
 		}
 	}
 	return
