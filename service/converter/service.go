@@ -215,7 +215,7 @@ func (c svc) convertBody(src *enmime.Envelope, dst *pb.CloudEvent, internal bool
 			err = fmt.Errorf("%w: %s", ErrParse, "no text data")
 		default:
 			dst.Data = &pb.CloudEvent_TextData{
-				TextData: c.cleanRecipients(txt),
+				TextData: strings.TrimSpace(c.cleanRecipients(txt)),
 			}
 		}
 	}
