@@ -20,12 +20,19 @@ type session struct {
 }
 
 func newSession(rcptsPublish, rcptsInternal map[string]bool, dataLimit int64, svc service.Service) smtp.Session {
-	return &session{
-		rcptsPublish:  rcptsPublish,
-		rcptsInternal: rcptsInternal,
+	s := &session{
+		rcptsPublish:  make(map[string]bool),
+		rcptsInternal: make(map[string]bool),
 		dataLimit:     dataLimit,
 		svc:           svc,
 	}
+	for r := range rcptsPublish {
+		s.rcptsPublish[strings.ToLower(r)] = true
+	}
+	for r := range rcptsInternal {
+		s.rcptsInternal[strings.ToLower(r)] = true
+	}
+	return s
 }
 
 func (s *session) Reset() {

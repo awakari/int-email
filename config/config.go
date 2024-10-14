@@ -18,7 +18,8 @@ type ApiConfig struct {
 		Host string `envconfig:"API_SMTP_HOST" required:"true"`
 		Port uint16 `envconfig:"API_SMTP_PORT" default:"465" required:"true"`
 		Data struct {
-			Limit uint32 `envconfig:"API_SMTP_DATA_LIMIT" default:"1048576" required:"true"`
+			Limit           uint32 `envconfig:"API_SMTP_DATA_LIMIT" default:"1048576" required:"true"`
+			TruncUrlQueries bool   `envconfig:"API_SMTP_DATA_TRUNC_URL_QUERIES" default:"false"`
 		}
 		Recipients struct {
 			Publish  []string `envconfig:"API_SMTP_RECIPIENTS_PUBLISH" required:"true"`
@@ -38,12 +39,7 @@ type ApiConfig struct {
 	}
 	Group     string `envconfig:"API_GROUP" default:"default" required:"true"`
 	EventType EventTypeConfig
-	Interests struct {
-		Uri              string `envconfig:"API_INTERESTS_URI" required:"true" default:"subscriptions-proxy:50051"`
-		DetailsUriPrefix string `envconfig:"API_INTERESTS_DETAILS_URI_PREFIX" required:"true" default:"https://awakari.com/sub-details.html?id="`
-	}
-	Reader ReaderConfig
-	Writer struct {
+	Writer    struct {
 		Backoff   time.Duration `envconfig:"API_WRITER_BACKOFF" default:"10s" required:"true"`
 		BatchSize uint32        `envconfig:"API_WRITER_BATCH_SIZE" default:"16" required:"true"`
 		Cache     WriterCacheConfig

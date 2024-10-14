@@ -25,6 +25,7 @@ type svc struct {
 	htmlPolicy        *bluemonday.Policy
 	writerInternalCfg config.WriterInternalConfig
 	rcptsPublish      map[string]bool
+	truncUrlQuery     bool
 }
 
 const ceKeyLenMax = 20
@@ -66,14 +67,15 @@ var headerWhiteList = map[string]bool{
 	"xreportabuse":         true,
 	"xvirusscanned":        true,
 }
-var reUrlTail = regexp.MustCompile(`\?[a-zA-Z0-9_\-]+=[a-zA-Z0-9_\-~.%&/#+]*`)
+var reUrlQuery = regexp.MustCompile(`\?[a-zA-Z0-9_\-]+=[a-zA-Z0-9_\-~.%&/#+]*`)
 
-func NewConverter(evtType string, htmlPolicy *bluemonday.Policy, writerInternalCfg config.WriterInternalConfig, rcptsPublish map[string]bool) Service {
+func NewConverter(evtType string, htmlPolicy *bluemonday.Policy, writerInternalCfg config.WriterInternalConfig, rcptsPublish map[string]bool, truncUrlQuery bool) Service {
 	return svc{
 		evtType:           evtType,
 		htmlPolicy:        htmlPolicy,
 		writerInternalCfg: writerInternalCfg,
 		rcptsPublish:      rcptsPublish,
+		truncUrlQuery:     truncUrlQuery,
 	}
 }
 
@@ -204,7 +206,9 @@ func (c svc) convertBody(src *enmime.Envelope, dst *pb.CloudEvent, internal bool
 		if err == nil {
 			txt = src.HTML
 			if !internal {
-				txt = reUrlTail.ReplaceAllString(txt, "\"")
+				if c.truncUrlQuery {
+					txt = reUrlQuery.ReplaceAllString(txt, "\"")
+				}
 				txt = c.htmlPolicy.Sanitize(txt)
 			}
 		}
@@ -311,18 +315,10 @@ func (c svc) convertAttachments(src *enmime.Envelope, dst *pb.CloudEvent, from s
 func (c svc) cleanRecipients(src string) (dst string) {
 	dst = src
 	for rcpt := range c.rcptsPublish {
-		if strings.Contains(dst, rcpt+"@") {
-			dst = strings.ReplaceAll(dst, rcpt+"@", "")
-		}
-		if strings.Contains(dst, strings.ToLower(rcpt)+"@") {
-			dst = strings.ReplaceAll(dst, strings.ToLower(rcpt)+"@", "")
-		}
-		if strings.Contains(dst, rcpt) {
-			dst = strings.ReplaceAll(dst, rcpt, "")
-		}
-		if strings.Contains(dst, strings.ToLower(rcpt)) {
-			dst = strings.ReplaceAll(dst, strings.ToLower(rcpt), "")
-		}
+		dst = strings.ReplaceAll(dst, rcpt+"@", "")
+		dst = strings.ReplaceAll(dst, strings.ToLower(rcpt)+"@", "")
+		dst = strings.ReplaceAll(dst, rcpt, "")
+		dst = strings.ReplaceAll(dst, strings.ToLower(rcpt), "")
 	}
 	return
 }

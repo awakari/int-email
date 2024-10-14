@@ -231,6 +231,7 @@ John`),
 		map[string]bool{
 			"jane.smith": true,
 		},
+		false,
 	)
 	conv = NewLogging(conv, slog.Default())
 	for k, c := range cases {
@@ -253,7 +254,7 @@ John`),
 	}
 }
 
-func Test_handleHtml(t *testing.T) {
+func TestSvc_handleHtml(t *testing.T) {
 	if os.Getenv("CI") == "true" {
 		t.Skip("Skipping test in CI environment")
 	}
@@ -268,4 +269,22 @@ func Test_handleHtml(t *testing.T) {
 	err = conv.handleHtml(string(d), evt)
 	assert.Nil(t, err)
 	fmt.Printf("%+v\n", evt.Attributes)
+}
+
+func TestSvc_cleanRecipients(t *testing.T) {
+	if os.Getenv("CI") == "true" {
+		t.Skip("Skipping test in CI environment")
+	}
+	d, err := os.ReadFile("emaildata.html")
+	require.Nil(t, err)
+	conv := svc{
+		htmlPolicy: util.HtmlPolicy(),
+		rcptsPublish: map[string]bool{
+			"QaZxSw": true,
+		},
+	}
+	src := string(d)
+	assert.True(t, strings.Contains(src, "QaZxSw"))
+	dst := conv.cleanRecipients(src)
+	assert.False(t, strings.Contains(dst, "QaZxSw"))
 }

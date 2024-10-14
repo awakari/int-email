@@ -89,6 +89,7 @@ api:
   smtp:
     data:
       limit: "1048576"
+      truncUrlQueries: true
     rcpt:
       names: "publish"
       limit: "100"
