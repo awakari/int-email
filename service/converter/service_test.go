@@ -28,23 +28,6 @@ func TestSvc_Convert(t *testing.T) {
 			r:   strings.NewReader(``),
 			err: ErrParse,
 		},
-		"no date": {
-			r: strings.NewReader(`From: John Doe <john@example.com>
-To: Jane Smith <jane.smith@example.com>
-Subject: Meeting Notes and Attachment
-Message-ID: <unique-message-id@example.com>
-MIME-Version: 1.0
-Content-Type: text/plain; charset="UTF-8"
-Content-Transfer-Encoding: 7bit
-
-Hi Jane,
-
-Please find attached the meeting notes and presentation slides.
-
-Best regards,
-John`),
-			err: ErrParse,
-		},
 		"no message id": {
 			r: strings.NewReader(`From: John Doe <john@example.com>
 To: Jane Smith <jane.smith@example.com>

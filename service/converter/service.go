@@ -90,22 +90,36 @@ func (c svc) Convert(src io.Reader, dst *pb.CloudEvent, from string, internal bo
 }
 
 func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, from string, internal bool) (err error) {
+	err = c.convertHeaders(src, dst, from, internal)
+	if err == nil {
+		err = c.convertBody(src, dst, internal)
+	}
+	if err == nil {
+		c.convertAttachments(src, dst, from)
+		if internal {
+			dst.Attributes[c.writerInternalCfg.Name] = &pb.CloudEventAttributeValue{
+				Attr: &pb.CloudEventAttributeValue_CeInteger{
+					CeInteger: c.writerInternalCfg.Value,
+				},
+			}
+		}
+	}
+	return
+}
 
+func (c svc) convertHeaders(src *enmime.Envelope, dst *pb.CloudEvent, from string, internal bool) (err error) {
 	for _, k := range src.GetHeaderKeys() {
 		v := src.GetHeader(k)
 		ceKey := c.convertHeaderKey(k)
 		switch ceKey {
 		case "date":
-			var t time.Time
-			t, err = time.Parse(time.RFC1123Z, v)
-			if err != nil {
-				err = nil
-				t = time.Now().UTC()
-			}
-			dst.Attributes[ceKeyTime] = &pb.CloudEventAttributeValue{
-				Attr: &pb.CloudEventAttributeValue_CeTimestamp{
-					CeTimestamp: timestamppb.New(t),
-				},
+			t, tErr := time.Parse(time.RFC1123Z, v)
+			if tErr == nil {
+				dst.Attributes[ceKeyTime] = &pb.CloudEventAttributeValue{
+					Attr: &pb.CloudEventAttributeValue_CeTimestamp{
+						CeTimestamp: timestamppb.New(t),
+					},
+				}
 			}
 		case "from":
 			fromActual := v
@@ -144,89 +158,16 @@ func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, from string, inte
 			}
 		}
 	}
-
-	var txt string
-	if src.Text != "" {
-		txt = src.Text
-	}
-	if src.HTML != "" {
-		err = c.handleHtml(src.HTML, dst)
-		if err == nil {
-			txt = src.HTML
-			if !internal {
-				txt = reUrlTail.ReplaceAllString(txt, "\"")
-				txt = c.htmlPolicy.Sanitize(txt)
-			}
-		}
-	}
-	if err == nil {
-		switch txt {
-		case "":
-			err = fmt.Errorf("%w: %s", ErrParse, "no text data")
-		default:
-			dst.Data = &pb.CloudEvent_TextData{
-				TextData: c.cleanRecipients(txt),
-			}
-		}
-	}
-
-	if err == nil {
-		if dst.Attributes[ceKeyTime] == nil {
-			err = fmt.Errorf("%w: %s", ErrParse, "no message date in the source data")
-		}
-		if dst.Attributes[ceKeyObjectUrl] == nil {
-			err = fmt.Errorf("%w: %s", ErrParse, "no message id in the source data")
-		}
-	}
-
-	if err == nil {
-
-		dst.Id = ksuid.New().String()
-		if dst.Source == "" {
-			dst.Source = c.cleanRecipients(from)
-		}
-		dst.SpecVersion = ceSpecVersion
-		dst.Type = c.evtType
-
-		var parts []*enmime.Part
-		parts = append(parts, src.Attachments...)
-		parts = append(parts, src.Inlines...)
-		parts = append(parts, src.OtherParts...)
-		var contentIds []string
-		var contentTypes []string
-		var fileNames []string
-		for _, p := range parts {
-			contentIds = append(contentIds, p.ContentID)
-			contentTypes = append(contentTypes, p.ContentType)
-			fileNames = append(fileNames, p.FileName)
-		}
-		if len(parts) > 0 {
-			dst.Attributes[ceKeyAttContentIds] = &pb.CloudEventAttributeValue{
-				Attr: &pb.CloudEventAttributeValue_CeString{
-					CeString: strings.Join(contentIds, ", "),
-				},
-			}
-			dst.Attributes[ceKeyAttContentTypes] = &pb.CloudEventAttributeValue{
-				Attr: &pb.CloudEventAttributeValue_CeString{
-					CeString: strings.Join(contentTypes, ", "),
-				},
-			}
-			dst.Attributes[ceKeyAttFileNames] = &pb.CloudEventAttributeValue{
-				Attr: &pb.CloudEventAttributeValue_CeString{
-					CeString: strings.Join(fileNames, ", "),
-				},
-			}
-		}
-	}
-
-	if internal {
-		dst.Attributes[c.writerInternalCfg.Name] = &pb.CloudEventAttributeValue{
-			Attr: &pb.CloudEventAttributeValue_CeInteger{
-				CeInteger: c.writerInternalCfg.Value,
+	if dst.Attributes[ceKeyTime] == nil {
+		dst.Attributes[ceKeyTime] = &pb.CloudEventAttributeValue{
+			Attr: &pb.CloudEventAttributeValue_CeTimestamp{
+				CeTimestamp: timestamppb.New(time.Now().UTC()),
 			},
 		}
 	}
-
+	if dst.Attributes[ceKeyObjectUrl] == nil {
+		err = fmt.Errorf("%w: %s", ErrParse, "no message id in the source data")
+	}
 	return
 }
 
@@ -253,6 +194,34 @@ func (c svc) convertAddr(src string) (dst string) {
 	return
 }
 
+func (c svc) convertBody(src *enmime.Envelope, dst *pb.CloudEvent, internal bool) (err error) {
+	var txt string
+	if src.Text != "" {
+		txt = src.Text
+	}
+	if src.HTML != "" {
+		err = c.handleHtml(src.HTML, dst)
+		if err == nil {
+			txt = src.HTML
+			if !internal {
+				txt = reUrlTail.ReplaceAllString(txt, "\"")
+				txt = c.htmlPolicy.Sanitize(txt)
+			}
+		}
+	}
+	if err == nil {
+		switch txt {
+		case "":
+			err = fmt.Errorf("%w: %s", ErrParse, "no text data")
+		default:
+			dst.Data = &pb.CloudEvent_TextData{
+				TextData: c.cleanRecipients(txt),
+			}
+		}
+	}
+	return
+}
+
 func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 	var doc *goquery.Document
 	doc, err = goquery.NewDocumentFromReader(strings.NewReader(src))
@@ -260,14 +229,19 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 		err = fmt.Errorf("%w: %s", ErrParse, err)
 	}
 	if err == nil {
+		// quora
+		s := doc.
+			Find("td.answer_details").
+			Find("a")
+		c.handleUrlOriginal(s, evt, false)
 		// substack
-		s := doc.Find("a.email-button-outline")
-		c.handleUrlOriginal(s, evt)
+		s = doc.Find("a.email-button-outline")
+		c.handleUrlOriginal(s, evt, true)
 	}
 	return
 }
 
-func (c svc) handleUrlOriginal(s *goquery.Selection, evt *pb.CloudEvent) {
+func (c svc) handleUrlOriginal(s *goquery.Selection, evt *pb.CloudEvent, trunc bool) {
 	for _, n := range s.Nodes {
 		var urlOrig string
 		for _, a := range n.Attr {
@@ -277,9 +251,11 @@ func (c svc) handleUrlOriginal(s *goquery.Selection, evt *pb.CloudEvent) {
 			}
 		}
 		if urlOrig != "" {
-			urlEnd := strings.Index(urlOrig, "?")
-			if urlEnd > 0 {
-				urlOrig = urlOrig[:urlEnd]
+			if trunc {
+				urlEnd := strings.Index(urlOrig, "?")
+				if urlEnd > 0 {
+					urlOrig = urlOrig[:urlEnd]
+				}
 			}
 			evt.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
 				Attr: &pb.CloudEventAttributeValue_CeUri{
@@ -287,6 +263,46 @@ func (c svc) handleUrlOriginal(s *goquery.Selection, evt *pb.CloudEvent) {
 				},
 			}
 			break
+		}
+	}
+	return
+}
+
+func (c svc) convertAttachments(src *enmime.Envelope, dst *pb.CloudEvent, from string) {
+	dst.Id = ksuid.New().String()
+	if dst.Source == "" {
+		dst.Source = c.cleanRecipients(from)
+	}
+	dst.SpecVersion = ceSpecVersion
+	dst.Type = c.evtType
+
+	var parts []*enmime.Part
+	parts = append(parts, src.Attachments...)
+	parts = append(parts, src.Inlines...)
+	parts = append(parts, src.OtherParts...)
+	var contentIds []string
+	var contentTypes []string
+	var fileNames []string
+	for _, p := range parts {
+		contentIds = append(contentIds, p.ContentID)
+		contentTypes = append(contentTypes, p.ContentType)
+		fileNames = append(fileNames, p.FileName)
+	}
+	if len(parts) > 0 {
+		dst.Attributes[ceKeyAttContentIds] = &pb.CloudEventAttributeValue{
+			Attr: &pb.CloudEventAttributeValue_CeString{
+				CeString: strings.Join(contentIds, ", "),
+			},
+		}
+		dst.Attributes[ceKeyAttContentTypes] = &pb.CloudEventAttributeValue{
+			Attr: &pb.CloudEventAttributeValue_CeString{
+				CeString: strings.Join(contentTypes, ", "),
+			},
+		}
+		dst.Attributes[ceKeyAttFileNames] = &pb.CloudEventAttributeValue{
+			Attr: &pb.CloudEventAttributeValue_CeString{
+				CeString: strings.Join(fileNames, ", "),
+			},
 		}
 	}
 	return
