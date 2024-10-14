@@ -233,8 +233,11 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 		err = fmt.Errorf("%w: %s", ErrParse, err)
 	}
 	if err == nil {
+		// ghost
+		s := doc.Find("a.post-title-link")
+		c.handleUrlOriginal(s, evt, true)
 		// quora
-		s := doc.
+		s = doc.
 			Find("td.answer_details").
 			Find("a")
 		c.handleUrlOriginal(s, evt, false)
