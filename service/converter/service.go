@@ -130,13 +130,21 @@ func (c svc) convertHeaders(src *enmime.Envelope, dst *pb.CloudEvent, from strin
 				fromActual = fromActual[addrPos:]
 			}
 			dst.Source = c.cleanRecipients(c.convertAddr(fromActual))
-		case "listurl":
-			dst.Source = c.cleanRecipients(c.convertAddr(v))
-		case "messageid":
+		case "listpost":
 			dst.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
 				Attr: &pb.CloudEventAttributeValue_CeUri{
 					CeUri: c.cleanRecipients(c.convertAddr(v)),
 				},
+			}
+		case "listurl":
+			dst.Source = c.cleanRecipients(c.convertAddr(v))
+		case "messageid":
+			if dst.Attributes[ceKeyObjectUrl] == nil {
+				dst.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
+					Attr: &pb.CloudEventAttributeValue_CeString{
+						CeString: c.cleanRecipients(c.convertAddr(v)),
+					},
+				}
 			}
 		case "subject":
 			dst.Attributes[ceKeySummary] = &pb.CloudEventAttributeValue{
@@ -236,13 +244,25 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 		// ghost
 		s := doc.Find("a.post-title-link")
 		c.handleUrlOriginal(s, evt, true)
+		// govdelivery
+		s = doc.Find("a")
+		if href, hrefOk := s.First().Attr("href"); hrefOk && strings.HasPrefix(href, "https://links-1.govdelivery.com") {
+			c.handleUrlOriginal(s, evt, false)
+		}
 		// quora
 		s = doc.
 			Find("td.answer_details").
 			Find("a")
 		c.handleUrlOriginal(s, evt, false)
 		// substack
-		s = doc.Find("a.email-button-outline")
+		if u, uOk := evt.Attributes[ceKeyObjectUrl]; uOk && u.GetCeUri() == "" {
+			s = doc.Find("a.email-button-outline")
+			c.handleUrlOriginal(s, evt, true)
+		}
+		// "view in browser"
+		s = doc.Find("a").FilterFunction(func(i int, s *goquery.Selection) bool {
+			return strings.TrimSpace(strings.ToLower(s.Text())) == "view in browser"
+		})
 		c.handleUrlOriginal(s, evt, true)
 	}
 	return
