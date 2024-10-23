@@ -83,8 +83,8 @@ John`),
 						},
 					},
 					"objecturl": {
-						Attr: &pb.CloudEventAttributeValue_CeUri{
-							CeUri: "unique-message-id@example.com",
+						Attr: &pb.CloudEventAttributeValue_CeString{
+							CeString: "unique-message-id@example.com",
 						},
 					},
 					"mimeversion": {
@@ -146,8 +146,8 @@ John`),
 						},
 					},
 					"objecturl": {
-						Attr: &pb.CloudEventAttributeValue_CeUri{
-							CeUri: "unique-message-id@example.com",
+						Attr: &pb.CloudEventAttributeValue_CeString{
+							CeString: "unique-message-id@example.com",
 						},
 					},
 					"mimeversion": {
@@ -203,8 +203,8 @@ John`),
 						},
 					},
 					"objecturl": {
-						Attr: &pb.CloudEventAttributeValue_CeUri{
-							CeUri: "unique-message-id@example.com",
+						Attr: &pb.CloudEventAttributeValue_CeString{
+							CeString: "unique-message-id@example.com",
 						},
 					},
 					"mimeversion": {

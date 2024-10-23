@@ -9,6 +9,7 @@ import (
 	"github.com/jhillyerd/enmime"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/segmentio/ksuid"
+	"golang.org/x/net/html"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"io"
 	"regexp"
@@ -242,55 +243,86 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 	}
 	if err == nil {
 		// ghost
-		s := doc.Find("a.post-title-link")
-		c.handleUrlOriginal(s, evt, true)
+		doc.
+			Find("a.post-title-link").
+			First().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, true)
+			})
 		// govdelivery
-		s = doc.Find("a")
-		if href, hrefOk := s.First().Attr("href"); hrefOk && strings.HasPrefix(href, "https://links-1.govdelivery.com") {
-			c.handleUrlOriginal(s, evt, false)
-		}
+		doc.
+			Find("a").
+			FilterFunction(func(i int, s *goquery.Selection) bool {
+				if href, hrefPresent := s.Attr("href"); hrefPresent && strings.HasPrefix(href, "https://links-1.govdelivery.com") {
+					return true
+				}
+				return false
+			}).
+			First().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, false)
+			})
 		// quora
-		s = doc.
+		doc.
 			Find("td.answer_details").
-			Find("a")
-		c.handleUrlOriginal(s, evt, false)
+			Find("a").
+			First().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, false)
+			})
 		// substack
-		if u, uOk := evt.Attributes[ceKeyObjectUrl]; uOk && u.GetCeUri() == "" {
-			s = doc.Find("a.email-button-outline")
-			c.handleUrlOriginal(s, evt, true)
+		if u, uOk := evt.Attributes[ceKeyObjectUrl]; !uOk || u.GetCeUri() == "" {
+			doc.
+				Find("a.email-button-outline").
+				First().
+				Each(func(i int, s *goquery.Selection) {
+					c.handleUrlOriginalFirst(s, evt, true)
+				})
 		}
 		// "view in browser"
-		s = doc.Find("a").FilterFunction(func(i int, s *goquery.Selection) bool {
-			return strings.TrimSpace(strings.ToLower(s.Text())) == "view in browser"
-		})
-		c.handleUrlOriginal(s, evt, true)
+		doc.
+			Find("a").
+			FilterFunction(func(i int, s *goquery.Selection) bool {
+				return strings.TrimSpace(strings.ToLower(s.Text())) == "view in browser"
+			}).
+			First().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, true)
+			})
 	}
 	return
 }
 
-func (c svc) handleUrlOriginal(s *goquery.Selection, evt *pb.CloudEvent, trunc bool) {
+func (c svc) handleUrlOriginalFirst(s *goquery.Selection, evt *pb.CloudEvent, trunc bool) {
 	for _, n := range s.Nodes {
-		var urlOrig string
-		for _, a := range n.Attr {
-			if a.Key == "href" {
-				urlOrig = a.Val
-				break
-			}
-		}
-		if urlOrig != "" {
-			if trunc {
-				urlEnd := strings.Index(urlOrig, "?")
-				if urlEnd > 0 {
-					urlOrig = urlOrig[:urlEnd]
-				}
-			}
-			evt.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
-				Attr: &pb.CloudEventAttributeValue_CeUri{
-					CeUri: urlOrig,
-				},
-			}
+		if c.handleUrlOriginal(n, evt, trunc) {
 			break
 		}
+	}
+	return
+}
+
+func (c svc) handleUrlOriginal(n *html.Node, evt *pb.CloudEvent, trunc bool) (set bool) {
+	var urlOrig string
+	for _, a := range n.Attr {
+		if a.Key == "href" {
+			urlOrig = a.Val
+			break
+		}
+	}
+	if urlOrig != "" {
+		if trunc {
+			urlEnd := strings.Index(urlOrig, "?")
+			if urlEnd > 0 {
+				urlOrig = urlOrig[:urlEnd]
+			}
+		}
+		evt.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
+			Attr: &pb.CloudEventAttributeValue_CeUri{
+				CeUri: urlOrig,
+			},
+		}
+		set = true
 	}
 	return
 }
