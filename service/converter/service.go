@@ -12,6 +12,7 @@ import (
 	"golang.org/x/net/html"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"io"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -249,11 +250,11 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 			Each(func(i int, s *goquery.Selection) {
 				c.handleUrlOriginalFirst(s, evt, true)
 			})
-		// govdelivery
+		// govdelivery.com
 		doc.
 			Find("a").
 			FilterFunction(func(i int, s *goquery.Selection) bool {
-				if href, hrefPresent := s.Attr("href"); hrefPresent && strings.HasPrefix(href, "https://links-1.govdelivery.com") {
+				if href, hrefPresent := s.Attr("href"); hrefPresent && strings.Contains(href, "govdelivery.com") {
 					return true
 				}
 				return false
@@ -311,6 +312,11 @@ func (c svc) handleUrlOriginal(n *html.Node, evt *pb.CloudEvent, trunc bool) (se
 		}
 	}
 	if urlOrig != "" {
+		if strings.HasSuffix(urlOrig, "https://links-") && strings.Contains(urlOrig, ".govdelivery.com/CL0/") {
+			urlOrig = urlOrig[len("https://links-")+1+len(".govdelivery.com/CL0/"):]
+			urlOrig = urlOrig[:strings.Index(urlOrig, "/")]
+			urlOrig, _ = url.QueryUnescape(urlOrig)
+		}
 		if trunc {
 			urlEnd := strings.Index(urlOrig, "?")
 			if urlEnd > 0 {
