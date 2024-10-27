@@ -312,7 +312,7 @@ func (c svc) handleUrlOriginal(n *html.Node, evt *pb.CloudEvent, trunc bool) (se
 		}
 	}
 	if urlOrig != "" {
-		if strings.HasSuffix(urlOrig, "https://links-") && strings.Contains(urlOrig, ".govdelivery.com/CL0/") {
+		if strings.HasPrefix(urlOrig, "https://links-") && strings.Contains(urlOrig, ".govdelivery.com/CL0/") {
 			urlOrig = urlOrig[len("https://links-")+1+len(".govdelivery.com/CL0/"):]
 			urlOrig = urlOrig[:strings.Index(urlOrig, "/")]
 			urlOrig, _ = url.QueryUnescape(urlOrig)
