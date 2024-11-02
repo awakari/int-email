@@ -284,7 +284,11 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 		doc.
 			Find("a").
 			FilterFunction(func(i int, s *goquery.Selection) bool {
-				return strings.TrimSpace(strings.ToLower(s.Text())) == "view in browser"
+				txt := strings.ToLower(s.Text())
+				if strings.Contains(txt, "view") && strings.Contains(txt, "browser") {
+					return true
+				}
+				return false
 			}).
 			First().
 			Each(func(i int, s *goquery.Selection) {
