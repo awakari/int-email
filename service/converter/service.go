@@ -243,6 +243,13 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 		err = fmt.Errorf("%w: %s", ErrParse, err)
 	}
 	if err == nil {
+		// dailysignal
+		doc.
+			Find("a.item-link").
+			First().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, true)
+			})
 		// ghost
 		doc.
 			Find("a.post-title-link").
@@ -280,7 +287,7 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 					c.handleUrlOriginalFirst(s, evt, true)
 				})
 		}
-		// "view in browser"
+		// "view in browser", etc
 		doc.
 			Find("a").
 			FilterFunction(func(i int, s *goquery.Selection) bool {
