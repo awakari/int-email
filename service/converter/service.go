@@ -291,6 +291,9 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 				if strings.TrimSpace(txt) == "read more" {
 					return true
 				}
+				if strings.TrimSpace(txt) == "web reader" {
+					return true
+				}
 				if strings.TrimSpace(txt) == "sign up" {
 					return true
 				}
