@@ -292,16 +292,19 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 			Find("a").
 			FilterFunction(func(i int, s *goquery.Selection) bool {
 				txt := strings.ToLower(s.Text())
-				if strings.Contains(txt, "view") && strings.Contains(txt, "browser") {
+				if len(txt) < 32 &&
+					(strings.Contains(txt, "read") || strings.Contains(txt, "view")) &&
+					(strings.Contains(txt, "browser") || strings.Contains(txt, "online") || strings.Contains(txt, "webpage")) {
 					return true
 				}
-				if strings.TrimSpace(txt) == "read more" {
+				txt = strings.TrimSpace(txt)
+				if txt == "read more" {
 					return true
 				}
-				if strings.TrimSpace(txt) == "web reader" {
+				if txt == "web reader" {
 					return true
 				}
-				if strings.TrimSpace(txt) == "sign up" {
+				if txt == "sign up" {
 					return true
 				}
 				return false
