@@ -316,6 +316,18 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 			Each(func(i int, s *goquery.Selection) {
 				c.handleUrlOriginalFirst(s, evt, true)
 			})
+		//
+		doc.
+			Find("a").
+			Find("img").
+			FilterFunction(func(i int, s *goquery.Selection) bool {
+				return s.AttrOr("alt", "") == "Read on Axios"
+			}).
+			First().
+			Parent().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, true)
+			})
 		// "view in browser", etc
 		doc.
 			Find("a").
