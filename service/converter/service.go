@@ -333,7 +333,7 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 			Find("a").
 			FilterFunction(func(i int, s *goquery.Selection) bool {
 				txt := strings.ToLower(s.Text())
-				if len(txt) < 50 &&
+				if len(txt) < 100 &&
 					(strings.Contains(txt, "open") ||
 						strings.Contains(txt, "read") ||
 						strings.Contains(txt, "view")) &&
