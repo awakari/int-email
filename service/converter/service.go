@@ -287,20 +287,51 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 					c.handleUrlOriginalFirst(s, evt, true)
 				})
 		}
+		//
+		doc.
+			Find("a.author").
+			First().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, true)
+			})
+		//
+		doc.
+			Find("p").
+			FilterFunction(func(i int, s *goquery.Selection) bool {
+				return strings.TrimSpace(s.Text()) == "No images? Click here"
+			}).
+			Find("a").
+			First().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, true)
+			})
+		//
+		doc.
+			Find("div").
+			FilterFunction(func(i int, s *goquery.Selection) bool {
+				return strings.TrimSpace(s.Text()) == "To view this email as a web page, go here."
+			}).
+			Find("a").
+			First().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, true)
+			})
 		// "view in browser", etc
 		doc.
 			Find("a").
 			FilterFunction(func(i int, s *goquery.Selection) bool {
 				txt := strings.ToLower(s.Text())
-				if len(txt) < 32 &&
-					(strings.Contains(txt, "read") || strings.Contains(txt, "view")) &&
-					(strings.Contains(txt, "browser") || strings.Contains(txt, "online") || strings.Contains(txt, "webpage")) {
+				if len(txt) < 50 &&
+					(strings.Contains(txt, "open") ||
+						strings.Contains(txt, "read") ||
+						strings.Contains(txt, "view")) &&
+					(strings.Contains(txt, "browser") ||
+						strings.Contains(txt, "online") ||
+						strings.Contains(txt, "webpage") ||
+						strings.Contains(txt, "more")) {
 					return true
 				}
 				txt = strings.TrimSpace(txt)
-				if txt == "read more" {
-					return true
-				}
 				if txt == "web reader" {
 					return true
 				}
