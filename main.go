@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/awakari/client-sdk-go/api"
 	"github.com/awakari/int-email/api/http/pub"
 	apiSmtp "github.com/awakari/int-email/api/smtp"
 	"github.com/awakari/int-email/config"
@@ -30,18 +29,6 @@ func main() {
 	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &opts))
 	log.Info("starting the update for the feeds")
-
-	// awakari API client
-	var clientAwk api.Client
-	clientAwk, err = api.
-		NewClientBuilder().
-		WriterUri(cfg.Api.Writer.Uri).
-		Build()
-	if err != nil {
-		panic(fmt.Sprintf("failed to initialize the Awakari API client: %s", err))
-	}
-	defer clientAwk.Close()
-	log.Info("initialized the Awakari API client")
 
 	svcPub := pub.NewService(http.DefaultClient, cfg.Api.Writer.Uri, cfg.Api.Token.Internal)
 	svcPub = pub.NewLogging(svcPub, log)
