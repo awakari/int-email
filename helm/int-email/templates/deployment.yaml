@@ -67,12 +67,6 @@ spec:
               value: "{{ .Values.api.group }}"
             - name: API_WRITER_BACKOFF
               value: "{{ .Values.api.writer.backoff }}"
-            - name: API_WRITER_BATCH_SIZE
-              value: "{{ .Values.api.writer.batchSize }}"
-            - name: API_WRITER_CACHE_SIZE
-              value: "{{ .Values.api.writer.cache.size }}"
-            - name: API_WRITER_CACHE_TTL
-              value: "{{ .Values.api.writer.cache.ttl }}"
             - name: API_WRITER_URI
               value: "{{ .Values.api.writer.uri }}"
             - name: API_WRITER_INTERNAL_NAME
@@ -82,14 +76,17 @@ spec:
                 secretKeyRef:
                   name: "{{ .Values.api.writer.internal.secret }}"
                   key: "{{ .Values.api.writer.internal.name }}"
-            - name: API_WRITER_INTERNAL_RATE_LIMIT_PER_MINUTE
-              value: "{{ .Values.api.writer.internal.rateLimit.minute }}"
             - name: LOG_LEVEL
               value: "{{ .Values.log.level }}"
             - name: API_EVENT_TYPE_SELF
               value: "{{ .Values.api.event.typ.self }}"
             - name: API_SMTP_DATA_TRUNC_URL_QUERIES
               value: "{{ .Values.api.smtp.data.truncUrlQueries }}"
+            - name: API_TOKEN_INTERNAL
+              valueFrom:
+                secretKeyRef:
+                  key: "{{ .Values.api.token.internal.key }}"
+                  name: "{{ .Values.api.token.internal.name }}"
           volumeMounts:
             - name: tls-certificates
               mountPath: /etc/smtp/tls  # Mount the TLS secret here

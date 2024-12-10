@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
+	"github.com/awakari/int-email/api/http/pub"
 	"github.com/awakari/int-email/config"
 	"github.com/awakari/int-email/service/converter"
-	"github.com/awakari/int-email/service/writer"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/stretchr/testify/assert"
 	"io"
@@ -44,7 +44,7 @@ John`),
 		},
 		"fail write": {
 			from: "johndoe@example.com",
-			in: strings.NewReader(`From: fail
+			in: strings.NewReader(`From: noack
 To: Jane Smith <jane.smith@example.com>
 Subject: Meeting Notes and Attachment
 Date: Thu, 10 Oct 2024 12:34:56 +0000
@@ -59,7 +59,7 @@ Please find attached the meeting notes and presentation slides.
 
 Best regards,
 John`),
-			err: writer.ErrWrite,
+			err: pub.ErrNoAck,
 		},
 	}
 	log := slog.Default()
@@ -74,8 +74,9 @@ John`),
 			),
 			log,
 		),
-		writer.NewLogging(writer.NewMock(), log),
+		pub.NewLogging(pub.NewMock(), log),
 		"default",
+		1,
 	)
 	s = NewLogging(s, log)
 	for k, c := range cases {

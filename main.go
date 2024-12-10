@@ -4,14 +4,15 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/awakari/client-sdk-go/api"
+	"github.com/awakari/int-email/api/http/pub"
 	apiSmtp "github.com/awakari/int-email/api/smtp"
 	"github.com/awakari/int-email/config"
 	"github.com/awakari/int-email/service"
 	"github.com/awakari/int-email/service/converter"
-	"github.com/awakari/int-email/service/writer"
 	"github.com/awakari/int-email/util"
 	"github.com/emersion/go-smtp"
 	"log/slog"
+	"net/http"
 	"os"
 )
 
@@ -42,8 +43,8 @@ func main() {
 	defer clientAwk.Close()
 	log.Info("initialized the Awakari API client")
 
-	svcWriter := writer.NewService(clientAwk, cfg.Api.Writer.Backoff, cfg.Api.Writer.Cache, log)
-	svcWriter = writer.NewLogging(svcWriter, log)
+	svcPub := pub.NewService(http.DefaultClient, cfg.Api.Writer.Uri, cfg.Api.Token.Internal)
+	svcPub = pub.NewLogging(svcPub, log)
 
 	rcptsPublish := map[string]bool{}
 	for _, name := range cfg.Api.Smtp.Recipients.Publish {
@@ -51,7 +52,7 @@ func main() {
 	}
 	svcConv := converter.NewConverter(cfg.Api.EventType.Self, util.HtmlPolicy(), cfg.Api.Writer.Internal, rcptsPublish, cfg.Api.Smtp.Data.TruncUrlQueries)
 	svcConv = converter.NewLogging(svcConv, log)
-	svc := service.NewService(svcConv, svcWriter, cfg.Api.Group)
+	svc := service.NewService(svcConv, svcPub, cfg.Api.Group, cfg.Api.Writer.Backoff)
 	svc = service.NewLogging(svc, log)
 
 	rcptsInternal := map[string]bool{}

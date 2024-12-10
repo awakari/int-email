@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"errors"
+	"github.com/awakari/int-email/api/http/pub"
 	"github.com/awakari/int-email/service/converter"
-	"github.com/awakari/int-email/service/writer"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/cloudevents/sdk-go/binding/format/protobuf/v2/pb"
 	"io"
+	"time"
 )
 
 type Service interface {
@@ -13,16 +16,20 @@ type Service interface {
 }
 
 type svc struct {
-	conv   converter.Service
-	writer writer.Service
-	group  string
+	svcConv          converter.Service
+	svcPub           pub.Service
+	groupId          string
+	backoffTimeLimit time.Duration
 }
 
-func NewService(conv converter.Service, writer writer.Service, group string) Service {
+const backoffInitDelay = 100 * time.Millisecond
+
+func NewService(svcConv converter.Service, svcPub pub.Service, groupId string, backoffTimeLimit time.Duration) Service {
 	return svc{
-		conv:   conv,
-		writer: writer,
-		group:  group,
+		svcConv:          svcConv,
+		svcPub:           svcPub,
+		groupId:          groupId,
+		backoffTimeLimit: backoffTimeLimit,
 	}
 }
 
@@ -30,9 +37,22 @@ func (s svc) Submit(ctx context.Context, from string, internal bool, r io.Reader
 	evt := &pb.CloudEvent{
 		Attributes: make(map[string]*pb.CloudEventAttributeValue),
 	}
-	err = s.conv.Convert(r, evt, from, internal)
+	err = s.svcConv.Convert(r, evt, from, internal)
 	if err == nil {
-		err = s.writer.Write(context.TODO(), evt, s.group, evt.Source)
+		err = s.svcPub.Publish(ctx, evt, s.groupId, evt.Source)
+		if errors.Is(err, pub.ErrNoAck) {
+			err = s.retryBackoff(func() error {
+				return s.svcPub.Publish(ctx, evt, s.groupId, evt.Source)
+			})
+		}
 	}
+	return
+}
+
+func (s svc) retryBackoff(op func() error) (err error) {
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = backoffInitDelay
+	b.MaxElapsedTime = s.backoffTimeLimit
+	err = backoff.Retry(op, b)
 	return
 }

@@ -40,11 +40,12 @@ type ApiConfig struct {
 	Group     string `envconfig:"API_GROUP" default:"default" required:"true"`
 	EventType EventTypeConfig
 	Writer    struct {
-		Backoff   time.Duration `envconfig:"API_WRITER_BACKOFF" default:"10s" required:"true"`
-		BatchSize uint32        `envconfig:"API_WRITER_BATCH_SIZE" default:"16" required:"true"`
-		Cache     WriterCacheConfig
-		Internal  WriterInternalConfig
-		Uri       string `envconfig:"API_WRITER_URI" default:"resolver:50051" required:"true"`
+		Backoff  time.Duration `envconfig:"API_WRITER_BACKOFF" default:"10s" required:"true"`
+		Internal WriterInternalConfig
+		Uri      string `envconfig:"API_WRITER_URI" default:"http://pub:8080/v1" required:"true"`
+	}
+	Token struct {
+		Internal string `envconfig:"API_TOKEN_INTERNAL" required:"true"`
 	}
 }
 
@@ -54,9 +55,8 @@ type WriterCacheConfig struct {
 }
 
 type WriterInternalConfig struct {
-	Name               string `envconfig:"API_WRITER_INTERNAL_NAME" default:"awkinternal" required:"true"`
-	Value              int32  `envconfig:"API_WRITER_INTERNAL_VALUE" required:"true"`
-	RateLimitPerMinute int    `envconfig:"API_WRITER_INTERNAL_RATE_LIMIT_PER_MINUTE" default:"1" required:"true"`
+	Name  string `envconfig:"API_WRITER_INTERNAL_NAME" default:"awkinternal" required:"true"`
+	Value int32  `envconfig:"API_WRITER_INTERNAL_VALUE" required:"true"`
 }
 
 type ReaderConfig struct {

@@ -108,14 +108,12 @@ api:
     internal:
       name: "awkinternal"
       secret: "resolver-internal-attr-val"
-      rateLimit:
-        minute: 1
     backoff: "10s"
-    batchSize: 16
-    cache:
-      size: 100
-      ttl: "24h"
-    uri: "resolver:50051"
+    uri: "http://pub:8080/v1"
+  token:
+    internal:
+      key: "api-token-internal"
+      name: "auth"
 backup:
   secrets:
     image: "alpine:3.20"
