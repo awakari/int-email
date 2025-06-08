@@ -28,7 +28,7 @@ func main() {
 		Level: slog.Level(cfg.Log.Level),
 	}
 	log := slog.New(slog.NewTextHandler(os.Stdout, &opts))
-	log.Info("starting the update for the feeds")
+	log.Info("starting...")
 
 	svcPub := pub.NewService(http.DefaultClient, cfg.Api.Writer.Uri, cfg.Api.Token.Internal)
 	svcPub = pub.NewLogging(svcPub, log)

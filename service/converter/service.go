@@ -96,7 +96,7 @@ func (c svc) Convert(src io.Reader, dst *pb.CloudEvent, from string, internal bo
 func (c svc) convert(src *enmime.Envelope, dst *pb.CloudEvent, from string, internal bool) (err error) {
 	err = c.convertHeaders(src, dst, from, internal)
 	if err == nil {
-		err = c.convertBody(src, dst, internal)
+		err = c.convertBody(src, dst, from, internal)
 	}
 	if err == nil {
 		c.convertAttachments(src, dst, from)
@@ -206,12 +206,13 @@ func (c svc) convertAddr(src string) (dst string) {
 	return
 }
 
-func (c svc) convertBody(src *enmime.Envelope, dst *pb.CloudEvent, internal bool) (err error) {
+func (c svc) convertBody(src *enmime.Envelope, dst *pb.CloudEvent, from string, internal bool) (err error) {
 	var txt string
 	if src.Text != "" {
 		txt = src.Text
 	}
 	if src.HTML != "" {
+		fmt.Printf("Email from %s contains HTML: %s\n", from, src.HTML)
 		err = c.handleHtml(src.HTML, dst)
 		if err == nil {
 			txt = src.HTML
