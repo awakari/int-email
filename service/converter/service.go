@@ -212,7 +212,6 @@ func (c svc) convertBody(src *enmime.Envelope, dst *pb.CloudEvent, from string, 
 		txt = src.Text
 	}
 	if src.HTML != "" {
-		fmt.Printf("Email from %s contains HTML: %s\n", from, src.HTML)
 		err = c.handleHtml(src.HTML, dst)
 		if err == nil {
 			txt = src.HTML
@@ -230,7 +229,7 @@ func (c svc) convertBody(src *enmime.Envelope, dst *pb.CloudEvent, from string, 
 			err = fmt.Errorf("%w: %s", ErrParse, "no text data")
 		default:
 			dst.Data = &pb.CloudEvent_TextData{
-				TextData: strings.TrimSpace(c.cleanRecipients(txt)),
+				TextData: dst.GetTextData() + strings.TrimSpace(c.cleanRecipients(txt)),
 			}
 		}
 	}
@@ -244,6 +243,18 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 		err = fmt.Errorf("%w: %s", ErrParse, err)
 	}
 	if err == nil {
+		// axios
+		doc.
+			Find("a").
+			Find("img").
+			FilterFunction(func(i int, s *goquery.Selection) bool {
+				return s.AttrOr("alt", "") == "Read on Axios"
+			}).
+			First().
+			Parent().
+			Each(func(i int, s *goquery.Selection) {
+				c.handleUrlOriginalFirst(s, evt, true)
+			})
 		// dailysignal
 		doc.
 			Find("a.item-link").
@@ -270,6 +281,33 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 			First().
 			Each(func(i int, s *goquery.Selection) {
 				c.handleUrlOriginalFirst(s, evt, false)
+			})
+		// linkedin
+		doc.
+			Find("a").
+			FilterFunction(func(i int, s *goquery.Selection) bool {
+				if href, hrefPresent := s.Attr("href"); hrefPresent && strings.HasPrefix(href, "https://www.linkedin.com/comm/jobs/view/") {
+					return true
+				}
+				return false
+			}).
+			Each(func(i int, s *goquery.Selection) {
+				for _, n := range s.Nodes {
+					var addr string
+					for _, a := range n.Attr {
+						if a.Key == "href" {
+							addr = a.Val
+							break
+						}
+					}
+					if addr != "" {
+						addr = truncateUrl(addr)
+						evt.Data = &pb.CloudEvent_TextData{
+							TextData: fmt.Sprintf("%s<a href=\"%s\">%s</a>\n", evt.GetTextData(), addr, s.Text()),
+						}
+					}
+				}
+				return
 			})
 		// quora
 		doc.
@@ -314,18 +352,6 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 			}).
 			Find("a").
 			First().
-			Each(func(i int, s *goquery.Selection) {
-				c.handleUrlOriginalFirst(s, evt, true)
-			})
-		//
-		doc.
-			Find("a").
-			Find("img").
-			FilterFunction(func(i int, s *goquery.Selection) bool {
-				return s.AttrOr("alt", "") == "Read on Axios"
-			}).
-			First().
-			Parent().
 			Each(func(i int, s *goquery.Selection) {
 				c.handleUrlOriginalFirst(s, evt, true)
 			})
@@ -385,10 +411,7 @@ func (c svc) handleUrlOriginal(n *html.Node, evt *pb.CloudEvent, trunc bool) (se
 			urlOrig, _ = url.QueryUnescape(urlOrig)
 		}
 		if trunc {
-			urlEnd := strings.Index(urlOrig, "?")
-			if urlEnd > 0 {
-				urlOrig = urlOrig[:urlEnd]
-			}
+			urlOrig = truncateUrl(urlOrig)
 		}
 		evt.Attributes[ceKeyObjectUrl] = &pb.CloudEventAttributeValue{
 			Attr: &pb.CloudEventAttributeValue_CeUri{
@@ -447,6 +470,17 @@ func (c svc) cleanRecipients(src string) (dst string) {
 		dst = strings.ReplaceAll(dst, strings.ToLower(rcpt)+"@", "")
 		dst = strings.ReplaceAll(dst, rcpt, "")
 		dst = strings.ReplaceAll(dst, strings.ToLower(rcpt), "")
+	}
+	return
+}
+
+func truncateUrl(src string) (dst string) {
+	urlEnd := strings.Index(src, "?")
+	switch urlEnd > 0 {
+	case true:
+		dst = src[:urlEnd]
+	default:
+		dst = src
 	}
 	return
 }
