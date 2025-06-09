@@ -70,6 +70,7 @@ var headerWhiteList = map[string]bool{
 	"xvirusscanned":        true,
 }
 var reUrlQuery = regexp.MustCompile(`\?[a-zA-Z0-9_\-]+=[a-zA-Z0-9_\-~.%&/#+]*`)
+var reWhiteSpace = regexp.MustCompile(`\s+`)
 
 func NewConverter(evtType string, htmlPolicy *bluemonday.Policy, writerInternalCfg config.WriterInternalConfig, rcptsPublish map[string]bool, truncUrlQuery bool) Service {
 	return svc{
@@ -302,8 +303,11 @@ func (c svc) handleHtml(src string, evt *pb.CloudEvent) (err error) {
 					}
 					if addr != "" {
 						addr = truncateUrl(addr)
-						evt.Data = &pb.CloudEvent_TextData{
-							TextData: fmt.Sprintf("%s<a href=\"%s\">%s</a>\n", evt.GetTextData(), addr, s.Text()),
+						txt := reWhiteSpace.ReplaceAllString(s.Text(), " ")
+						if txt != "" && txt != " " {
+							evt.Data = &pb.CloudEvent_TextData{
+								TextData: fmt.Sprintf("%s<a href=\"%s\">%s</a>\n", evt.GetTextData(), addr, txt),
+							}
 						}
 					}
 				}
