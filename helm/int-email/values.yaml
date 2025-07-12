@@ -99,9 +99,6 @@ api:
   event:
     typ:
       self: "com_awakari_email_v1"
-  interests:
-    uri: "subscriptions-proxy:50051"
-    detailsUriPrefix: "https://awakari.com/sub-details.html?id="
   reader:
     uriEvtBase: "https://awakari.com/pub-msg.html?id="
   writer:
